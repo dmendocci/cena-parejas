@@ -1,7 +1,221 @@
 <!DOCTYPE html>
-<html>
-<body style="background-color: #e3f2fd; font-family: sans-serif; text-align: center; padding: 50px;">
-    <h1>👮‍♂️ PANEL DE ADMIN (DUMMY)</h1>
-    <p>Aquí irá el buscador de invitados y el botón de WhatsApp.</p>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Control Boda</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f6f8; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .controls { display: flex; gap: 20px; flex-wrap: wrap; background: #eef2f6; padding: 20px; border-radius: 8px; margin-bottom: 20px; justify-content: center; }
+        .control-group { flex: 1; min-width: 250px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        select { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; display: none; }
+        th { background: #34495e; color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+
+        /* Botón WhatsApp */
+        .btn-whatsapp {
+            background-color: #25D366; color: white; border: none; padding: 12px; border-radius: 6px;
+            cursor: pointer; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem;
+        }
+        .btn-whatsapp:hover { background-color: #1ebc57; }
+        .btn-whatsapp:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .status-paid { color: #27ae60; font-weight: bold; background: #e8f8f5; padding: 8px; border-radius: 20px; text-align: center; margin-top: 10px; border: 1px solid #a9dfbf; }
+        #loading { text-align: center; padding: 40px; font-size: 1.2rem; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>💍 Panel de Control</h2>
+    <div id="loading">⏳ Cargando base de datos...</div>
+
+    <div class="controls" id="mainControls" style="display:none;">
+        <div class="control-group">
+            <label>🤵 Esposo:</label>
+            <select id="selectEsposo" onchange="filterData('esposo')"><option value="">-- Seleccionar --</option></select>
+        </div>
+        <div class="control-group">
+            <label>👰 Esposa:</label>
+            <select id="selectEsposa" onchange="filterData('esposa')"><option value="">-- Seleccionar --</option></select>
+        </div>
+    </div>
+
+    <table id="dataTable">
+        <thead><tr id="tableHead"></tr></thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    // --- PEGA AQUÍ TU URL DEL SCRIPT DE GOOGLE ---
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzy9VeXSVQ4UB-mvTzeW47A9FatjYHvQy3toWrJDYpE6a_pBEJZQZuD4S3zx3eVauwF_Q/exec"; 
+    
+    // Configuración
+    const SHEET_ID = '1U34XStgMUyf_FquxntWjGOG5QHsCnKrAaAiMEEQCFzQ';
+    const SHEET_GID = '1718744959';
+    const COL_ESPOSO = 1;
+    const COL_ESPOSA = 2;
+    const COL_ESTADO = 6; // Columna G (Índice 6)
+    const COL_LINK = 9;   // Columna J (Índice 9) - Donde guardamos el link
+
+    let allData = [];
+    let headers = [];
+
+    // --- Carga Inicial con Anti-Caché ---
+    function loadDatabase() {
+        const t = new Date().getTime();
+        const script = document.createElement('script');
+        script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
+        document.body.appendChild(script);
+    }
+
+    window.processData = function(json) {
+        headers = json.table.cols.map(c => c.label || "Col");
+        allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
+        populateDropdowns();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('mainControls').style.display = 'flex';
+    };
+
+    function populateDropdowns() {
+        const s1 = document.getElementById('selectEsposo');
+        const s2 = document.getElementById('selectEsposa');
+        s1.innerHTML = '<option value="">-- Seleccionar --</option>';
+        s2.innerHTML = '<option value="">-- Seleccionar --</option>';
+        
+        [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort().forEach(x => s1.add(new Option(x, x)));
+        [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort().forEach(x => s2.add(new Option(x, x)));
+    }
+
+    function filterData(source) {
+        const v1 = document.getElementById('selectEsposo').value;
+        const v2 = document.getElementById('selectEsposa').value;
+        let match = null;
+        if (source === 'esposo' && v1) match = allData.find(r => r[COL_ESPOSO] === v1);
+        else if (source === 'esposa' && v2) match = allData.find(r => r[COL_ESPOSA] === v2);
+        
+        if(match) {
+            if(source==='esposo') document.getElementById('selectEsposa').value = match[COL_ESPOSA];
+            else document.getElementById('selectEsposo').value = match[COL_ESPOSO];
+        }
+        renderTable(match);
+    }
+
+    function renderTable(row) {
+        const tbl = document.getElementById('dataTable');
+        const thead = document.getElementById('tableHead');
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = ''; thead.innerHTML = '';
+        
+        if (!row) { tbl.style.display = 'none'; return; }
+        tbl.style.display = 'table';
+
+        // Headers
+        headers.forEach(h => thead.insertAdjacentHTML('beforeend', `<th>${h}</th>`));
+        thead.insertAdjacentHTML('beforeend', `<th style="text-align:center">Acción</th>`);
+
+        // Fila
+        let tr = document.createElement('tr');
+        row.forEach(c => tr.insertAdjacentHTML('beforeend', `<td>${c}</td>`));
+
+        // Acción
+        let tdAction = document.createElement('td');
+        const estado = (row[COL_ESTADO] || "").toString().toLowerCase();
+        const linkGuardado = row[COL_LINK];
+        const isPaid = estado.includes("pagado");
+
+        if (isPaid) {
+            // YA PAGADO: Botón para reenviar
+            let btn = document.createElement('button');
+            btn.className = 'btn-whatsapp';
+            btn.innerHTML = '📲 Reenviar WhatsApp';
+            // Si ya existe link guardado, usamos ese. Si no, lo regeneramos.
+            let linkFinal = linkGuardado || "Regenerando...";
+            btn.onclick = () => openWhatsApp(row, linkFinal);
+            tdAction.appendChild(btn);
+            
+            let status = document.createElement('div');
+            status.className = 'status-paid';
+            status.innerText = "✅ PAGADO";
+            tdAction.appendChild(status);
+        } else {
+            // NO PAGADO: Validar y Generar
+            let btn = document.createElement('button');
+            btn.className = 'btn-whatsapp';
+            btn.innerHTML = '✅ Validar y Enviar Link';
+            btn.onclick = () => validateAndSend(btn, row, tdAction);
+            tdAction.appendChild(btn);
+        }
+        tr.appendChild(tdAction);
+        tbody.appendChild(tr);
+    }
+
+    // --- FUNCIÓN DE VALIDACIÓN Y ENVÍO ---
+    function validateAndSend(btn, row, container) {
+        btn.disabled = true;
+        btn.innerText = "⏳ Generando Link...";
+
+        const params = new URLSearchParams();
+        params.append('accion', 'pagar');
+        params.append('esposo', row[COL_ESPOSO]);
+        params.append('esposa', row[COL_ESPOSA]);
+
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        }).then(() => {
+            // Esperamos un poco para simular la respuesta (ya que es no-cors)
+            setTimeout(() => {
+                // Reconstruimos el link localmente para abrir WhatsApp rápido
+                // (Aunque el servidor ya lo guardó en la Columna J)
+                const linkGenerado = "https://dmendocci.github.io/cena-parejas/pase.html?esposo=" + encodeURIComponent(row[COL_ESPOSO]) + "&esposa=" + encodeURIComponent(row[COL_ESPOSA]);
+                
+                openWhatsApp(row, linkGenerado);
+                
+                // Actualizar UI
+                container.innerHTML = '';
+                let badge = document.createElement('div');
+                badge.className = 'status-paid';
+                badge.innerText = "✅ LISTO (Link Guardado)";
+                container.appendChild(badge);
+                
+                // Actualizar memoria local
+                row[COL_ESTADO] = "Pagado";
+                row[COL_LINK] = linkGenerado;
+
+            }, 1500);
+        }).catch(err => {
+            alert("Error de conexión");
+            btn.disabled = false;
+        });
+    }
+
+    function openWhatsApp(row, linkUrl) {
+        // Obtenemos teléfono, quitamos todo lo que no sea número
+        // Columna D es índice 3
+        let telefono = (row[3] || "").toString().replace(/\D/g, ''); 
+        
+        const mensaje = `¡Hola! Su asistencia a la boda ha sido confirmada.\n\nPor favor, presenten este código QR en la entrada:\n${linkUrl}\n\n¡Los esperamos!`;
+        
+        let waUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
+        if (telefono.length > 5) {
+            waUrl += `&phone=${telefono}`;
+        }
+        
+        window.open(waUrl, '_blank');
+    }
+
+    loadDatabase();
+</script>
+
 </body>
 </html>
