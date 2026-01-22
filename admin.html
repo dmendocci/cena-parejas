@@ -54,8 +54,8 @@
 </div>
 
 <script>
-    // --- PEGA AQUÍ TU URL DEL SCRIPT DE GOOGLE ---
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzy9VeXSVQ4UB-mvTzeW47A9FatjYHvQy3toWrJDYpE6a_pBEJZQZuD4S3zx3eVauwF_Q/exec"; 
+    // --- TU URL DEL SCRIPT CONFIGURADA ---
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxV9Xrkhp_sXg3flJj1FcyOPe0Is8fb7pOWhRoMg7Yz2ZOzK8d0PTDdllPpDPM2lU1-Hg/exec"; 
     
     // Configuración
     const SHEET_ID = '1U34XStgMUyf_FquxntWjGOG5QHsCnKrAaAiMEEQCFzQ';
@@ -176,7 +176,6 @@
             // Esperamos un poco para simular la respuesta (ya que es no-cors)
             setTimeout(() => {
                 // Reconstruimos el link localmente para abrir WhatsApp rápido
-                // (Aunque el servidor ya lo guardó en la Columna J)
                 const linkGenerado = "https://dmendocci.github.io/cena-parejas/pase.html?esposo=" + encodeURIComponent(row[COL_ESPOSO]) + "&esposa=" + encodeURIComponent(row[COL_ESPOSA]);
                 
                 openWhatsApp(row, linkGenerado);
