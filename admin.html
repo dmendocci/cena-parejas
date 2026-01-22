@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>Admin - Control Boda</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f4f6f8; padding: 20px; }
@@ -28,6 +33,7 @@
 
         .status-paid { color: #27ae60; font-weight: bold; background: #e8f8f5; padding: 8px; border-radius: 20px; text-align: center; margin-top: 10px; border: 1px solid #a9dfbf; }
         #loading { text-align: center; padding: 40px; font-size: 1.2rem; color: #666; }
+        .ver-num { font-size: 0.8em; color: #999; text-align: right; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -51,26 +57,32 @@
         <thead><tr id="tableHead"></tr></thead>
         <tbody id="tableBody"></tbody>
     </table>
+    
+    <div class="ver-num" id="versionTag"></div>
 </div>
 
 <script>
-    // --- TU URL DEL SCRIPT CONFIGURADA ---
+    // --- TUS URLs ---
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxV9Xrkhp_sXg3flJj1FcyOPe0Is8fb7pOWhRoMg7Yz2ZOzK8d0PTDdllPpDPM2lU1-Hg/exec"; 
-    
-    // Configuración
+    const URL_PASE_BASE = "https://dmendocci.github.io/cena-parejas/pase.html";
+
+    // Configuración Hoja
     const SHEET_ID = '1U34XStgMUyf_FquxntWjGOG5QHsCnKrAaAiMEEQCFzQ';
     const SHEET_GID = '1718744959';
     const COL_ESPOSO = 1;
     const COL_ESPOSA = 2;
-    const COL_ESTADO = 6; // Columna G (Índice 6)
-    const COL_LINK = 9;   // Columna J (Índice 9) - Donde guardamos el link
+    const COL_TELEFONO = 3; // Columna D (Indice 3)
+    const COL_ESTADO = 6;   // Columna G (Índice 6)
+    const COL_LINK = 9;     // Columna J (Índice 9)
 
     let allData = [];
     let headers = [];
 
     // --- Carga Inicial con Anti-Caché ---
     function loadDatabase() {
+        // Generamos número aleatorio para que SIEMPRE traiga datos nuevos
         const t = new Date().getTime();
+        document.getElementById('versionTag').innerText = "v." + t; // Para ver si actualizó
         const script = document.createElement('script');
         script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
         document.body.appendChild(script);
@@ -117,28 +129,26 @@
         if (!row) { tbl.style.display = 'none'; return; }
         tbl.style.display = 'table';
 
-        // Headers
         headers.forEach(h => thead.insertAdjacentHTML('beforeend', `<th>${h}</th>`));
         thead.insertAdjacentHTML('beforeend', `<th style="text-align:center">Acción</th>`);
 
-        // Fila
         let tr = document.createElement('tr');
         row.forEach(c => tr.insertAdjacentHTML('beforeend', `<td>${c}</td>`));
 
-        // Acción
         let tdAction = document.createElement('td');
         const estado = (row[COL_ESTADO] || "").toString().toLowerCase();
-        const linkGuardado = row[COL_LINK];
         const isPaid = estado.includes("pagado");
 
+        // --- SOLUCIÓN AL PROBLEMA "REGENERANDO" ---
+        // Construimos el link SIEMPRE aquí, no dependemos de si la hoja lo guardó o no.
+        const linkCalculado = generarLinkLocal(row[COL_ESPOSO], row[COL_ESPOSA]);
+
         if (isPaid) {
-            // YA PAGADO: Botón para reenviar
             let btn = document.createElement('button');
             btn.className = 'btn-whatsapp';
             btn.innerHTML = '📲 Reenviar WhatsApp';
-            // Si ya existe link guardado, usamos ese. Si no, lo regeneramos.
-            let linkFinal = linkGuardado || "Regenerando...";
-            btn.onclick = () => openWhatsApp(row, linkFinal);
+            // Usamos el link calculado inmediatamente
+            btn.onclick = () => openWhatsApp(row, linkCalculado);
             tdAction.appendChild(btn);
             
             let status = document.createElement('div');
@@ -146,7 +156,6 @@
             status.innerText = "✅ PAGADO";
             tdAction.appendChild(status);
         } else {
-            // NO PAGADO: Validar y Generar
             let btn = document.createElement('button');
             btn.className = 'btn-whatsapp';
             btn.innerHTML = '✅ Validar y Enviar Link';
@@ -157,41 +166,46 @@
         tbody.appendChild(tr);
     }
 
-    // --- FUNCIÓN DE VALIDACIÓN Y ENVÍO ---
+    // --- FUNCIÓN PARA CREAR EL LINK ---
+    function generarLinkLocal(esposo, esposa) {
+        return URL_PASE_BASE + "?esposo=" + encodeURIComponent(esposo) + "&esposa=" + encodeURIComponent(esposa);
+    }
+
     function validateAndSend(btn, row, container) {
         btn.disabled = true;
-        btn.innerText = "⏳ Generando Link...";
+        btn.innerText = "⏳ Registrando...";
+
+        // 1. Calculamos el link YA MISMO (No esperamos a Google)
+        const linkFinal = generarLinkLocal(row[COL_ESPOSO], row[COL_ESPOSA]);
 
         const params = new URLSearchParams();
         params.append('accion', 'pagar');
         params.append('esposo', row[COL_ESPOSO]);
         params.append('esposa', row[COL_ESPOSA]);
 
+        // 2. Enviamos a Google para que guarde (en segundo plano)
         fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: params
         }).then(() => {
-            // Esperamos un poco para simular la respuesta (ya que es no-cors)
             setTimeout(() => {
-                // Reconstruimos el link localmente para abrir WhatsApp rápido
-                const linkGenerado = "https://dmendocci.github.io/cena-parejas/pase.html?esposo=" + encodeURIComponent(row[COL_ESPOSO]) + "&esposa=" + encodeURIComponent(row[COL_ESPOSA]);
-                
-                openWhatsApp(row, linkGenerado);
+                // 3. Abrimos WhatsApp con el link que CALCULAMOS nosotros
+                openWhatsApp(row, linkFinal);
                 
                 // Actualizar UI
                 container.innerHTML = '';
                 let badge = document.createElement('div');
                 badge.className = 'status-paid';
-                badge.innerText = "✅ LISTO (Link Guardado)";
+                badge.innerText = "✅ LISTO";
                 container.appendChild(badge);
                 
-                // Actualizar memoria local
+                // Actualizar memoria local para que no pida validar de nuevo
                 row[COL_ESTADO] = "Pagado";
-                row[COL_LINK] = linkGenerado;
+                row[COL_LINK] = linkFinal;
 
-            }, 1500);
+            }, 1000); // 1 segundo de espera por estética
         }).catch(err => {
             alert("Error de conexión");
             btn.disabled = false;
@@ -199,10 +213,9 @@
     }
 
     function openWhatsApp(row, linkUrl) {
-        // Obtenemos teléfono, quitamos todo lo que no sea número
-        // Columna D es índice 3
-        let telefono = (row[3] || "").toString().replace(/\D/g, ''); 
+        let telefono = (row[COL_TELEFONO] || "").toString().replace(/\D/g, ''); 
         
+        // Mensaje limpio
         const mensaje = `¡Hola! Su asistencia a la boda ha sido confirmada.\n\nPor favor, presenten este código QR en la entrada:\n${linkUrl}\n\n¡Los esperamos!`;
         
         let waUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
