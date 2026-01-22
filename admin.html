@@ -9,7 +9,7 @@
     <title>Admin - Love Night</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #fdfbf7; color: #333; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-top: 5px solid #d4af37; }
+        .container { max-width: 1300px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-top: 5px solid #d4af37; }
         h1 { text-align: center; color: #d4af37; margin-bottom: 30px; font-weight: 300; letter-spacing: 1px; font-size: 1.8rem; text-transform: uppercase; }
         .filters-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; margin-bottom: 20px; }
         .row { display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
@@ -19,9 +19,9 @@
         .count-tag { text-align: right; font-size: 0.85rem; color: #777; margin-top: 5px; }
         
         .table-wrap { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 900px; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; margin-top: 10px; }
         th { background: #2c3e50; color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
-        td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 0.9rem; }
         tr:hover { background: #f9f9f9; }
         
         .tag { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
@@ -29,23 +29,17 @@
         .tag-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .tag-empty { color: #ccc; font-style: italic; }
         
-        /* Botón Único Unificado */
         .btn-action { 
-            background: #25D366; 
-            color: white; 
-            border: none; 
-            padding: 10px 15px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            width: 100%; 
-            font-size: 0.9rem;
-            transition: background 0.3s;
+            background: #25D366; color: white; border: none; padding: 10px 15px; 
+            border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; 
+            font-size: 0.9rem; transition: background 0.3s;
         }
         .btn-action:hover { background: #1ebc57; }
         .btn-action:disabled { background: #ccc; cursor: not-allowed; }
 
         #loading { text-align: center; padding: 40px; color: #888; }
+        /* Marca de versión para verificar actualización */
+        #version { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #ccc; }
     </style>
 </head>
 <body>
@@ -93,8 +87,10 @@
         </div>
     </div>
 </div>
+<div id="version">v4.0 - Prod</div>
+
 <script>
-    // --- TU URL DEL SCRIPT (CLON) ---
+    // --- URL DEL SCRIPT (TU CLON) ---
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
     
     // IDs Oficiales
@@ -102,14 +98,26 @@
     const SHEET_GID = '1064363108';
 
     // MAPEO DE COLUMNAS (A=0, B=1...)
+    // IMPORTANTE: Asegúrate de que en tu Excel la Columna E sea Tel Esposa (índice 4)
     const COL_ESPOSO = 1;      // B
     const COL_ESPOSA = 2;      // C
     const COL_TEL_ESP = 3;     // D (Tel Esposo)
-    const COL_TEL_ESPA = 4;    // E (Tel Esposa)
+    const COL_TEL_ESPA = 4;    // E (Tel Esposa) <-- AQUÍ ESTÁ EL NUEVO
     const COL_PAGO = 7;        // H
     const COL_CHECKIN = 8;     // I
     
-    let allData = []; let headers = []; let filteredData = [];
+    let allData = []; 
+    let filteredData = [];
+
+    // TÍTULOS MANUALES (Para ignorar lo que diga Google)
+    const CUSTOM_HEADERS = {
+        [COL_ESPOSO]: "Nombre Esposo",
+        [COL_ESPOSA]: "Nombre Esposa",
+        [COL_TEL_ESP]: "Tel. Esposo",
+        [COL_TEL_ESPA]: "Tel. Esposa",
+        [COL_PAGO]: "Estado Pago",
+        [COL_CHECKIN]: "Check-in"
+    };
 
     function loadDB() {
         const t = new Date().getTime();
@@ -119,33 +127,45 @@
     }
 
     window.processData = function(json) {
-        headers = json.table.cols.map(c => c.label || "Col");
+        // Obtenemos solo los datos brutos
         allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
-        initDropdowns(); applyFilters();
+        
+        initDropdowns(); 
+        applyFilters();
+        
         document.getElementById('loading').style.display = 'none';
         document.getElementById('mainContent').style.display = 'block';
     };
 
     function initDropdowns() {
-        const s1 = document.getElementById('filterEsposo'); const s2 = document.getElementById('filterEsposa');
+        const s1 = document.getElementById('filterEsposo'); 
+        const s2 = document.getElementById('filterEsposa');
+        // Filtramos y ordenamos nombres únicos
         const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
         const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
-        list1.forEach(x => s1.add(new Option(x, x))); list2.forEach(x => s2.add(new Option(x, x)));
+        
+        list1.forEach(x => s1.add(new Option(x, x))); 
+        list2.forEach(x => s2.add(new Option(x, x)));
     }
 
     function syncCouple(source) {
-        const v1 = document.getElementById('filterEsposo').value; const v2 = document.getElementById('filterEsposa').value;
+        const v1 = document.getElementById('filterEsposo').value; 
+        const v2 = document.getElementById('filterEsposa').value;
         if (source === 'esposo' && v1) {
-            const match = allData.find(r => r[COL_ESPOSO] === v1); if(match) document.getElementById('filterEsposa').value = match[COL_ESPOSA];
+            const match = allData.find(r => r[COL_ESPOSO] === v1); 
+            if(match) document.getElementById('filterEsposa').value = match[COL_ESPOSA];
         } else if (source === 'esposa' && v2) {
-            const match = allData.find(r => r[COL_ESPOSA] === v2); if(match) document.getElementById('filterEsposo').value = match[COL_ESPOSO];
+            const match = allData.find(r => r[COL_ESPOSA] === v2); 
+            if(match) document.getElementById('filterEsposo').value = match[COL_ESPOSO];
         }
         applyFilters();
     }
 
     function applyFilters() {
-        const fPago = document.getElementById('filterPago').value; const fCheck = document.getElementById('filterCheckIn').value;
-        const fEsposo = document.getElementById('filterEsposo').value; const fEsposa = document.getElementById('filterEsposa').value;
+        const fPago = document.getElementById('filterPago').value; 
+        const fCheck = document.getElementById('filterCheckIn').value;
+        const fEsposo = document.getElementById('filterEsposo').value; 
+        const fEsposa = document.getElementById('filterEsposa').value;
 
         filteredData = allData.filter(r => {
             const pagoVal = (r[COL_PAGO] || "").toString().toLowerCase();
@@ -161,41 +181,56 @@
             let passName = true;
             if (fEsposo && r[COL_ESPOSO] !== fEsposo) passName = false;
             if (fEsposa && r[COL_ESPOSA] !== fEsposa) passName = false;
+            
             return passPago && passCheck && passName;
         });
-        document.getElementById('countDisplay').innerText = `Registros: ${filteredData.length}`; renderTable();
+        document.getElementById('countDisplay').innerText = `Registros: ${filteredData.length}`; 
+        renderTable();
     }
 
     function renderTable() {
-        const tbody = document.getElementById('tableBody'); const thead = document.getElementById('tableHead');
-        tbody.innerHTML = ''; thead.innerHTML = '';
+        const tbody = document.getElementById('tableBody'); 
+        const thead = document.getElementById('tableHead');
+        tbody.innerHTML = ''; 
+        thead.innerHTML = '';
         
-        // COLUMNAS A MOSTRAR
-        const showCols = [1, 2, 3, 4, COL_PAGO, COL_CHECKIN];
+        // --- COLUMNAS A MOSTRAR (Manual y estricto) ---
+        // 1=Esposo, 2=Esposa, 3=Tel1, 4=Tel2, 7=Pago, 8=Checkin
+        // NOTA: EL índice 0 (Marca temporal) NO está aquí, así que no se dibujará.
+        const colsToShow = [COL_ESPOSO, COL_ESPOSA, COL_TEL_ESP, COL_TEL_ESPA, COL_PAGO, COL_CHECKIN];
         
-        showCols.forEach(i => {
-            let label = headers[i];
-            if(i === COL_TEL_ESP) label = "Tel. Esposo";
-            if(i === COL_TEL_ESPA) label = "Tel. Esposa";
-            if(i === COL_PAGO) label = "Estatus Pago"; 
-            if(i === COL_CHECKIN) label = "Check-in";
-            thead.insertAdjacentHTML('beforeend', `<th>${label}</th>`);
+        // Generar Encabezados Manualmente
+        colsToShow.forEach(colIndex => {
+            thead.insertAdjacentHTML('beforeend', `<th>${CUSTOM_HEADERS[colIndex]}</th>`);
         });
         thead.insertAdjacentHTML('beforeend', `<th>Acción</th>`);
 
+        // Generar Filas
         filteredData.forEach(row => {
             let tr = document.createElement('tr');
-            showCols.forEach(i => {
+            
+            colsToShow.forEach(i => {
                 let val = row[i];
-                if(i === COL_PAGO) val = (val && val.toString().toLowerCase().includes("pagado")) ? `<span class="tag tag-ok">Pagado</span>` : `<span class="tag tag-pending">Pendiente</span>`;
-                if(i === COL_CHECKIN) val = (val && val.toString() === "OK") ? `<span class="tag tag-ok">OK</span>` : `<span class="tag tag-empty">-</span>`;
+                // Formato visual
+                if(i === COL_PAGO) {
+                    val = (val && val.toString().toLowerCase().includes("pagado")) 
+                        ? `<span class="tag tag-ok">Pagado</span>` 
+                        : `<span class="tag tag-pending">Pendiente</span>`;
+                }
+                if(i === COL_CHECKIN) {
+                    val = (val && val.toString() === "OK") 
+                        ? `<span class="tag tag-ok">OK</span>` 
+                        : `<span class="tag tag-empty">-</span>`;
+                }
+                // Si es undefined (caso de la columna E vacía), poner guión
+                if (val === undefined || val === null) val = "";
+                
                 tr.insertAdjacentHTML('beforeend', `<td>${val}</td>`);
             });
             
-            // LÓGICA DE BOTÓN ÚNICO
+            // Botón
             let tdBtn = document.createElement('td');
             const isPaid = (row[COL_PAGO] || "").toString().toLowerCase().includes("pagado");
-            
             let btn = document.createElement('button');
             btn.className = 'btn-action';
             
@@ -207,50 +242,59 @@
                 btn.onclick = () => validatePay(btn, row);
             }
             tdBtn.appendChild(btn);
-            tr.appendChild(tdBtn); tbody.appendChild(tr);
+            tr.appendChild(tdBtn); 
+            tbody.appendChild(tr);
         });
     }
 
     function validatePay(btn, row) {
         btn.disabled = true; btn.innerText = "⏳ ...";
-        const params = new URLSearchParams(); params.append('accion', 'pagar'); params.append('esposo', row[COL_ESPOSO]); params.append('esposa', row[COL_ESPOSA]);
-        fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: params })
-        .then(() => {
+        const params = new URLSearchParams(); 
+        params.append('accion', 'pagar'); 
+        params.append('esposo', row[COL_ESPOSO]); 
+        params.append('esposa', row[COL_ESPOSA]);
+        
+        fetch(APPS_SCRIPT_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+            body: params 
+        }).then(() => {
             setTimeout(() => {
                 row[COL_PAGO] = "Pagado";
-                // Iniciar secuencia de envío a ambos
-                sendSequence(row);
-                applyFilters(); // Refrescar visualmente
+                sendSequence(row); // Iniciar envío automático
+                applyFilters(); 
             }, 1000);
         });
     }
 
-    // --- SECUENCIA DE ENVÍO AUTOMÁTICA (SIN CONFIRMACIÓN) ---
     function sendSequence(row) {
         const link = `https://dmendocci.github.io/cena-parejas/pase.html?esposo=${encodeURIComponent(row[COL_ESPOSO])}&esposa=${encodeURIComponent(row[COL_ESPOSA])}`;
         const msg = `¡Hola! Su registro a "Love Night" está confirmado.\n\nSu pase de acceso:\n${link}\n\n¡Los esperamos!`;
         
         let tel1 = (row[COL_TEL_ESP] || "").toString().replace(/\D/g, '');
-        let tel2 = (row[COL_TEL_ESPA] || "").toString().replace(/\D/g, '');
+        let tel2 = (row[COL_TEL_ESPA] || "").toString().replace(/\D/g, ''); // Telefono Esposa (Col E)
 
         // 1. Enviar al Esposo
         if(tel1.length > 5) {
             let url1 = `https://web.whatsapp.com/send?phone=${tel1}&text=${encodeURIComponent(msg)}`;
             window.open(url1, '_blank');
         } else {
-            alert("⚠️ El Esposo no tiene número registrado. No se pudo abrir su chat.");
+            alert("⚠️ El Esposo no tiene número registrado.");
         }
 
-        // 2. Enviar a la Esposa (Automático tras 2 segundos)
+        // 2. Enviar a la Esposa (Automático tras 2.5 seg para evitar bloqueo)
         if(tel2.length > 5) {
-            // Usamos un retraso de 2 segundos para dar tiempo a que la primera pestaña abra
-            // y para intentar que el navegador no bloquee el segundo popup.
             setTimeout(() => {
                 let url2 = `https://web.whatsapp.com/send?phone=${tel2}&text=${encodeURIComponent(msg)}`;
                 window.open(url2, '_blank');
-            }, 2000);
+            }, 2500);
+        } else {
+            console.log("Esposa sin número registrado en columna E");
         }
     }
+    
+    // Iniciar
     loadDB();
 </script>
 </body>
