@@ -8,35 +8,51 @@
     <meta http-equiv="Expires" content="0">
     <title>Admin - Love Night</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #fdfbf7; color: #333; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #fdfbf7; color: #333; padding: 20px; transition: background 0.5s; }
         .container { max-width: 1300px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-top: 5px solid #d4af37; }
-        h1 { text-align: center; color: #d4af37; margin-bottom: 30px; font-weight: 300; letter-spacing: 1px; font-size: 1.8rem; text-transform: uppercase; }
+        
+        /* Header con estado en vivo */
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        h1 { color: #d4af37; margin: 0; font-weight: 300; letter-spacing: 1px; font-size: 1.5rem; text-transform: uppercase; }
+        .live-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; display: flex; align-items: center; gap: 5px; background: #e8f8f5; padding: 5px 12px; border-radius: 20px; border: 1px solid #a9dfbf; }
+        .blink { animation: blinker 1.5s linear infinite; width: 8px; height: 8px; background: #27ae60; border-radius: 50%; display: inline-block; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
         .filters-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; margin-bottom: 20px; }
         .row { display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
         .col { flex: 1; min-width: 250px; }
         label { font-weight: bold; font-size: 0.9rem; color: #555; display: block; margin-bottom: 5px; }
         select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; }
         .count-tag { text-align: right; font-size: 0.85rem; color: #777; margin-top: 5px; }
+        
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 1000px; margin-top: 10px; }
         th { background: #2c3e50; color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
         td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 0.9rem; }
         tr:hover { background: #f9f9f9; }
+        
         .tag { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
         .tag-ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .tag-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .tag-empty { color: #ccc; font-style: italic; }
+        
         .btn-action { background: #25D366; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 0.9rem; transition: background 0.3s; }
         .btn-action:hover { background: #1ebc57; }
         .btn-action:disabled { background: #ccc; cursor: not-allowed; }
-        #loading { text-align: center; padding: 40px; color: #888; }
+
+        #loading { text-align: center; padding: 50px; color: #888; font-size: 1.2rem; }
         #version { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #ccc; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Sistema de registro de cena de parejas - "Love Night"</h1>
-    <div id="loading">⏳ Cargando base de datos oficial...</div>
+    <div class="header-flex">
+        <h1>Love Night - Registro</h1>
+        <div class="live-indicator"><span class="blink"></span> EN VIVO</div>
+    </div>
+
+    <div id="loading">⏳ Conectando base de datos...</div>
+
     <div id="mainContent" style="display:none;">
         <div class="filters-box">
             <div class="row">
@@ -78,11 +94,10 @@
         </div>
     </div>
 </div>
-<div id="version">v6.0 - FinalMap</div>
+<div id="version">v7.0 - AutoRefresh</div>
 
 <script>
-    // --- TU URL DEL SCRIPT (CLON) ---
-    // Asegúrate de que esta sea la URL correcta de tu script clonado
+    // --- URL DEL SCRIPT (TU CLON) ---
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
     
     // IDs Oficiales
@@ -90,11 +105,11 @@
     const SHEET_GID = '1064363108';
 
     // =========================================================
-    // 🛠️ MAPEO CORREGIDO SEGÚN IMAGEN
+    // 🛠️ MAPEO DEFINITIVO (B=Esposo, C=Tel, D=Esposa, E=Tel)
     // =========================================================
     const LETRA_ESPOSO    = 'B'; 
     const LETRA_TEL_ESP   = 'C'; 
-    const LETRA_ESPOSA    = 'D'; // Antes estaba mal, ahora es D
+    const LETRA_ESPOSA    = 'D'; 
     const LETRA_TEL_ESPA  = 'E'; 
     const LETRA_PAGO      = 'H'; 
     const LETRA_CHECKIN   = 'I'; 
@@ -118,26 +133,53 @@
         [COL_CHECKIN]: "Check-in"
     };
 
-    let allData = []; let filteredData = [];
+    let allData = []; 
+    let filteredData = [];
+    let isFirstLoad = true;
 
-    function loadDB() {
+    // --- CARGA DE DATOS ---
+    function loadDB(isAutoUpdate = false) {
         const t = new Date().getTime();
         const s = document.createElement('script');
         s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
         document.body.appendChild(s);
     }
 
+    // --- REFRESCAR CADA 5 SEGUNDOS ---
+    setInterval(() => {
+        loadDB(true);
+    }, 5000);
+
     window.processData = function(json) {
         allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
-        initDropdowns(); applyFilters();
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
+        
+        // Guardar selecciones actuales para no perderlas al refrescar
+        const currentEsposo = document.getElementById('filterEsposo').value;
+        const currentEsposa = document.getElementById('filterEsposa').value;
+
+        initDropdowns(); 
+        
+        // Restaurar selecciones si aún existen en los nuevos datos
+        if(currentEsposo) document.getElementById('filterEsposo').value = currentEsposo;
+        if(currentEsposa) document.getElementById('filterEsposa').value = currentEsposa;
+
+        applyFilters();
+        
+        if(isFirstLoad) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            isFirstLoad = false;
+        }
     };
 
     function initDropdowns() {
         const s1 = document.getElementById('filterEsposo'); 
         const s2 = document.getElementById('filterEsposa');
         
+        // Guardamos el valor seleccionado antes de borrar
+        const val1 = s1.value;
+        const val2 = s2.value;
+
         const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
         const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
         
@@ -146,6 +188,9 @@
 
         list1.forEach(x => s1.add(new Option(x, x))); 
         list2.forEach(x => s2.add(new Option(x, x)));
+
+        // Intentamos restaurar selección si no hemos limpiado el HTML arriba
+        // (Pero como limpiamos con innerHTML, el valor se pierde, por eso lo restauramos en processData)
     }
 
     function syncCouple(source) {
@@ -180,6 +225,7 @@
             if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
 
             let passName = true;
+            // Comparación laxa (!=) en lugar de estricta (!==) para evitar errores de tipos
             if (fEsposo && r[COL_ESPOSO] != fEsposo) passName = false;
             if (fEsposa && r[COL_ESPOSA] != fEsposa) passName = false;
             
@@ -249,10 +295,11 @@
             headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
             body: params 
         }).then(() => {
+            // Refresco inmediato optimista
             setTimeout(() => {
                 row[COL_PAGO] = "Pagado";
                 sendSequence(row); 
-                applyFilters(); 
+                loadDB(true); // Forzar recarga real
             }, 1000);
         });
     }
@@ -278,6 +325,8 @@
             }, 2500);
         }
     }
+    
+    // Iniciar
     loadDB();
 </script>
 </body>
