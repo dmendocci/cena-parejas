@@ -8,225 +8,367 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>Admin - Control Boda</title>
+    <title>Admin - Love Night</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f6f8; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        
-        .controls { display: flex; gap: 20px; flex-wrap: wrap; background: #eef2f6; padding: 20px; border-radius: 8px; margin-bottom: 20px; justify-content: center; }
-        .control-group { flex: 1; min-width: 250px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; }
-        select { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; display: none; }
-        th { background: #34495e; color: white; padding: 12px; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #eee; }
-
-        /* Botón WhatsApp */
-        .btn-whatsapp {
-            background-color: #25D366; color: white; border: none; padding: 12px; border-radius: 6px;
-            cursor: pointer; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem;
+        /* --- ESTILOS GENERALES --- */
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: #fdfbf7; /* Tono crema suave/romántico */
+            color: #4a4a4a; 
+            padding: 20px; 
+            margin: 0;
         }
-        .btn-whatsapp:hover { background-color: #1ebc57; }
-        .btn-whatsapp:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        .status-paid { color: #27ae60; font-weight: bold; background: #e8f8f5; padding: 8px; border-radius: 20px; text-align: center; margin-top: 10px; border: 1px solid #a9dfbf; }
-        #loading { text-align: center; padding: 40px; font-size: 1.2rem; color: #666; }
-        .ver-num { font-size: 0.8em; color: #999; text-align: right; margin-top: 5px; }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            border-top: 6px solid #d4af37; /* Dorado elegante */
+        }
+
+        h1 { 
+            text-align: center; 
+            color: #d4af37; 
+            margin-bottom: 30px; 
+            font-weight: 300; 
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 1.8rem;
+        }
+
+        /* --- SECCIÓN DE FILTROS --- */
+        .filters-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        label { 
+            font-weight: bold; 
+            display: block; 
+            margin-bottom: 8px; 
+            color: #2c3e50; 
+            font-size: 0.9rem;
+        }
+
+        select { 
+            width: 100%; 
+            padding: 12px; 
+            border-radius: 6px; 
+            border: 1px solid #ccc; 
+            background: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        select:focus { border-color: #d4af37; outline: none; }
+
+        /* --- TABLA --- */
+        .table-responsive { overflow-x: auto; }
+        
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            min-width: 900px; 
+            margin-top: 10px;
+        }
+
+        th { 
+            background: #2c3e50; 
+            color: white; 
+            padding: 15px; 
+            text-align: left; 
+            font-size: 0.95rem;
+        }
+
+        td { 
+            padding: 14px; 
+            border-bottom: 1px solid #eee; 
+            vertical-align: middle; 
+        }
+
+        tr:nth-child(even) { background-color: #fcfcfc; }
+        tr:hover { background-color: #f1f1f1; }
+
+        /* --- ETIQUETAS DE ESTADO --- */
+        .tag {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .tag-pagado { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .tag-pendiente { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .tag-checkin { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+
+        #loading { text-align: center; padding: 50px; color: #888; font-size: 1.2rem; }
+        .total-count { text-align: right; margin-top: 10px; color: #666; font-size: 0.9rem; }
+        
+        /* Ocultar elementos hasta cargar */
+        #contentArea { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>💍 Panel de Control</h2>
-    <div id="loading">⏳ Cargando base de datos...</div>
+    <h1>Sistema de registro de cena de parejas - "Love Night"</h1>
 
-    <div class="controls" id="mainControls" style="display:none;">
-        <div class="control-group">
-            <label>🤵 Esposo:</label>
-            <select id="selectEsposo" onchange="filterData('esposo')"><option value="">-- Seleccionar --</option></select>
+    <div id="loading">⏳ Cargando base de datos segura...</div>
+
+    <div id="contentArea">
+        <div class="filters-panel">
+            
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>💰 Listar por estatus de pago:</label>
+                    <select id="filterPago" onchange="applyFilters()">
+                        <option value="todos">Todos</option>
+                        <option value="pendientes">Pendientes (Sin pago)</option>
+                        <option value="pagados">Pagados</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>✅ Check in confirmado:</label>
+                    <select id="filterCheckIn" onchange="applyFilters()">
+                        <option value="default" selected>Seleccione una opción</option>
+                        <option value="confirmado">Confirmado (OK)</option>
+                        <option value="sin_confirmar">Sin confirmar</option>
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>🤵 Nombre del esposo:</label>
+                    <select id="filterEsposo" onchange="applyFilters('esposo')">
+                        <option value="">-- Todos --</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>👰 Nombre de la esposa:</label>
+                    <select id="filterEsposa" onchange="applyFilters('esposa')">
+                        <option value="">-- Todas --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="total-count" id="recordCount">Registros encontrados: 0</div>
         </div>
-        <div class="control-group">
-            <label>👰 Esposa:</label>
-            <select id="selectEsposa" onchange="filterData('esposa')"><option value="">-- Seleccionar --</option></select>
+
+        <div class="table-responsive">
+            <table id="dataTable">
+                <thead>
+                    <tr id="tableHead">
+                        </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
         </div>
     </div>
-
-    <table id="dataTable">
-        <thead><tr id="tableHead"></tr></thead>
-        <tbody id="tableBody"></tbody>
-    </table>
-    
-    <div class="ver-num" id="versionTag"></div>
 </div>
 
 <script>
-    // --- TUS URLs ---
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxV9Xrkhp_sXg3flJj1FcyOPe0Is8fb7pOWhRoMg7Yz2ZOzK8d0PTDdllPpDPM2lU1-Hg/exec"; 
-    const URL_PASE_BASE = "https://dmendocci.github.io/cena-parejas/pase.html";
+    // ======================================================
+    // ⚙️ CONFIGURACIÓN DE CONEXIÓN
+    // ======================================================
+    const SHEET_ID = '1slBfBNMEVgWOewNphlFi82fQbs7Y6GtD6Hcplj2D8do';
+    const SHEET_GID = '1064363108';
 
-    // Configuración Hoja
-    const SHEET_ID = '1U34XStgMUyf_FquxntWjGOG5QHsCnKrAaAiMEEQCFzQ';
-    const SHEET_GID = '1718744959';
-    const COL_ESPOSO = 1;
-    const COL_ESPOSA = 2;
-    const COL_TELEFONO = 3; // Columna D (Indice 3)
-    const COL_ESTADO = 6;   // Columna G (Índice 6)
-    const COL_LINK = 9;     // Columna J (Índice 9)
+    // 🗺️ MAPEO DE COLUMNAS (Indices comienzan en 0)
+    // Col A=0, B=1, C=2 ... H=7, I=8
+    const COL_ESPOSO = 1;      // Columna B
+    const COL_ESPOSA = 2;      // Columna C
+    const COL_PAGO = 7;        // Columna H (Estatus Pago)
+    const COL_CHECKIN = 8;     // Columna I (Check In) - Asumido como la siguiente a Pago
+    
+    // ======================================================
 
     let allData = [];
     let headers = [];
+    let filteredData = [];
 
-    // --- Carga Inicial con Anti-Caché ---
+    // 1. CARGA DE DATOS (Anti-Caché)
     function loadDatabase() {
-        // Generamos número aleatorio para que SIEMPRE traiga datos nuevos
-        const t = new Date().getTime();
-        document.getElementById('versionTag').innerText = "v." + t; // Para ver si actualizó
+        const t = new Date().getTime(); 
         const script = document.createElement('script');
+        // Usamos la API de visualización para leer datos sin exponer el link de edición
         script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
         document.body.appendChild(script);
     }
 
+    // 2. PROCESAMIENTO INICIAL
     window.processData = function(json) {
-        headers = json.table.cols.map(c => c.label || "Col");
+        // Extraer encabezados
+        headers = json.table.cols.map(c => c.label || "Columna");
+        
+        // Extraer filas
         allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
-        populateDropdowns();
+        
+        // Inicializar Dropdowns de Nombres
+        populateNameDropdowns();
+        
+        // Aplicar filtro inicial (mostrar todos)
+        applyFilters();
+
+        // Mostrar interfaz
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('mainControls').style.display = 'flex';
+        document.getElementById('contentArea').style.display = 'block';
     };
 
-    function populateDropdowns() {
-        const s1 = document.getElementById('selectEsposo');
-        const s2 = document.getElementById('selectEsposa');
-        s1.innerHTML = '<option value="">-- Seleccionar --</option>';
-        s2.innerHTML = '<option value="">-- Seleccionar --</option>';
+    // 3. LLENAR DROPDOWNS DE NOMBRES
+    function populateNameDropdowns() {
+        const selEsposo = document.getElementById('filterEsposo');
+        const selEsposa = document.getElementById('filterEsposa');
         
-        [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort().forEach(x => s1.add(new Option(x, x)));
-        [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort().forEach(x => s2.add(new Option(x, x)));
+        const listEsposos = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
+        const listEsposas = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
+
+        listEsposos.forEach(n => selEsposo.add(new Option(n, n)));
+        listEsposas.forEach(n => selEsposa.add(new Option(n, n)));
     }
 
-    function filterData(source) {
-        const v1 = document.getElementById('selectEsposo').value;
-        const v2 = document.getElementById('selectEsposa').value;
-        let match = null;
-        if (source === 'esposo' && v1) match = allData.find(r => r[COL_ESPOSO] === v1);
-        else if (source === 'esposa' && v2) match = allData.find(r => r[COL_ESPOSA] === v2);
-        
-        if(match) {
-            if(source==='esposo') document.getElementById('selectEsposa').value = match[COL_ESPOSA];
-            else document.getElementById('selectEsposo').value = match[COL_ESPOSO];
+    // 4. LÓGICA DE FILTRADO MAESTRO
+    function applyFilters(changedSource) {
+        // Obtener valores de los filtros
+        const valPago = document.getElementById('filterPago').value;
+        const valCheckIn = document.getElementById('filterCheckIn').value;
+        let valEsposo = document.getElementById('filterEsposo').value;
+        let valEsposa = document.getElementById('filterEsposa').value;
+
+        // Lógica de sincronización de pareja (si seleccionas esposo, se selecciona esposa)
+        if (changedSource === 'esposo' && valEsposo) {
+            const match = allData.find(r => r[COL_ESPOSO] === valEsposo);
+            if (match) {
+                valEsposa = match[COL_ESPOSA];
+                document.getElementById('filterEsposa').value = valEsposa;
+            }
+        } else if (changedSource === 'esposa' && valEsposa) {
+            const match = allData.find(r => r[COL_ESPOSA] === valEsposa);
+            if (match) {
+                valEsposo = match[COL_ESPOSO];
+                document.getElementById('filterEsposo').value = valEsposo;
+            }
         }
-        renderTable(match);
+
+        // --- FILTRADO ---
+        filteredData = allData.filter(row => {
+            let passPago = true;
+            let passCheckIn = true;
+            let passNombres = true;
+
+            // A. Filtro de Pago
+            const estadoPago = (row[COL_PAGO] || "").toString().toLowerCase().trim();
+            if (valPago === 'pendientes') {
+                // Pasa si está vacío O no dice "pagado"
+                passPago = (estadoPago === "");
+            } else if (valPago === 'pagados') {
+                passPago = estadoPago.includes("pagado");
+            }
+
+            // B. Filtro de Check-in
+            const estadoCheckIn = (row[COL_CHECKIN] || "").toString().toLowerCase().trim();
+            // Si es "default", ignoramos este filtro (pasa todo)
+            if (valCheckIn !== 'default' && valCheckIn !== 'todos') {
+                if (valCheckIn === 'confirmado') {
+                    passCheckIn = estadoCheckIn.includes("ok") || estadoCheckIn.includes("confirmada");
+                } else if (valCheckIn === 'sin_confirmar') {
+                    passCheckIn = (estadoCheckIn === "");
+                }
+            }
+
+            // C. Filtro de Nombres
+            if (valEsposo && row[COL_ESPOSO] !== valEsposo) passNombres = false;
+            if (valEsposa && row[COL_ESPOSA] !== valEsposa) passNombres = false;
+
+            return passPago && passCheckIn && passNombres;
+        });
+
+        // Actualizar contador
+        document.getElementById('recordCount').innerText = `Registros encontrados: ${filteredData.length}`;
+        
+        // Dibujar tabla
+        renderTable();
     }
 
-    function renderTable(row) {
-        const tbl = document.getElementById('dataTable');
+    // 5. DIBUJAR TABLA
+    function renderTable() {
         const thead = document.getElementById('tableHead');
         const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = ''; thead.innerHTML = '';
+        tbody.innerHTML = ''; 
+        thead.innerHTML = '';
+
+        // Encabezados (Mostrar solo columnas relevantes para admin)
+        // Mostramos las primeras 4 (Timestamp, Nombres, Tel) + Pago + CheckIn
+        const colsToShow = [0, 1, 2, 3, COL_PAGO, COL_CHECKIN];
         
-        if (!row) { tbl.style.display = 'none'; return; }
-        tbl.style.display = 'table';
-
-        headers.forEach(h => thead.insertAdjacentHTML('beforeend', `<th>${h}</th>`));
-        thead.insertAdjacentHTML('beforeend', `<th style="text-align:center">Acción</th>`);
-
-        let tr = document.createElement('tr');
-        row.forEach(c => tr.insertAdjacentHTML('beforeend', `<td>${c}</td>`));
-
-        let tdAction = document.createElement('td');
-        const estado = (row[COL_ESTADO] || "").toString().toLowerCase();
-        const isPaid = estado.includes("pagado");
-
-        // --- SOLUCIÓN AL PROBLEMA "REGENERANDO" ---
-        // Construimos el link SIEMPRE aquí, no dependemos de si la hoja lo guardó o no.
-        const linkCalculado = generarLinkLocal(row[COL_ESPOSO], row[COL_ESPOSA]);
-
-        if (isPaid) {
-            let btn = document.createElement('button');
-            btn.className = 'btn-whatsapp';
-            btn.innerHTML = '📲 Reenviar WhatsApp';
-            // Usamos el link calculado inmediatamente
-            btn.onclick = () => openWhatsApp(row, linkCalculado);
-            tdAction.appendChild(btn);
-            
-            let status = document.createElement('div');
-            status.className = 'status-paid';
-            status.innerText = "✅ PAGADO";
-            tdAction.appendChild(status);
-        } else {
-            let btn = document.createElement('button');
-            btn.className = 'btn-whatsapp';
-            btn.innerHTML = '✅ Validar y Enviar Link';
-            btn.onclick = () => validateAndSend(btn, row, tdAction);
-            tdAction.appendChild(btn);
-        }
-        tr.appendChild(tdAction);
-        tbody.appendChild(tr);
-    }
-
-    // --- FUNCIÓN PARA CREAR EL LINK ---
-    function generarLinkLocal(esposo, esposa) {
-        return URL_PASE_BASE + "?esposo=" + encodeURIComponent(esposo) + "&esposa=" + encodeURIComponent(esposa);
-    }
-
-    function validateAndSend(btn, row, container) {
-        btn.disabled = true;
-        btn.innerText = "⏳ Registrando...";
-
-        // 1. Calculamos el link YA MISMO (No esperamos a Google)
-        const linkFinal = generarLinkLocal(row[COL_ESPOSO], row[COL_ESPOSA]);
-
-        const params = new URLSearchParams();
-        params.append('accion', 'pagar');
-        params.append('esposo', row[COL_ESPOSO]);
-        params.append('esposa', row[COL_ESPOSA]);
-
-        // 2. Enviamos a Google para que guarde (en segundo plano)
-        fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params
-        }).then(() => {
-            setTimeout(() => {
-                // 3. Abrimos WhatsApp con el link que CALCULAMOS nosotros
-                openWhatsApp(row, linkFinal);
-                
-                // Actualizar UI
-                container.innerHTML = '';
-                let badge = document.createElement('div');
-                badge.className = 'status-paid';
-                badge.innerText = "✅ LISTO";
-                container.appendChild(badge);
-                
-                // Actualizar memoria local para que no pida validar de nuevo
-                row[COL_ESTADO] = "Pagado";
-                row[COL_LINK] = linkFinal;
-
-            }, 1000); // 1 segundo de espera por estética
-        }).catch(err => {
-            alert("Error de conexión");
-            btn.disabled = false;
+        colsToShow.forEach(idx => {
+            let title = headers[idx] || `Col ${idx}`;
+            if(idx === COL_PAGO) title = "Estatus Pago";
+            if(idx === COL_CHECKIN) title = "Check-In";
+            thead.insertAdjacentHTML('beforeend', `<th>${title}</th>`);
         });
-    }
 
-    function openWhatsApp(row, linkUrl) {
-        let telefono = (row[COL_TELEFONO] || "").toString().replace(/\D/g, ''); 
-        
-        // Mensaje limpio
-        const mensaje = `¡Hola! Su asistencia a la boda ha sido confirmada.\n\nPor favor, presenten este código QR en la entrada:\n${linkUrl}\n\n¡Los esperamos!`;
-        
-        let waUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
-        if (telefono.length > 5) {
-            waUrl += `&phone=${telefono}`;
+        // Filas
+        filteredData.forEach(row => {
+            let tr = document.createElement('tr');
+            
+            colsToShow.forEach(idx => {
+                let cellData = row[idx];
+                let content = cellData;
+
+                // Formato visual para Pago
+                if (idx === COL_PAGO) {
+                    let text = (cellData || "").toString().toLowerCase();
+                    if (text.includes("pagado")) {
+                        content = `<span class="tag tag-pagado">Pagado</span>`;
+                    } else {
+                        content = `<span class="tag tag-pendiente">Pendiente</span>`;
+                    }
+                }
+
+                // Formato visual para Check-in
+                if (idx === COL_CHECKIN) {
+                    let text = (cellData || "").toString().toLowerCase();
+                    if (text.includes("ok") || text.includes("confirmada")) {
+                        content = `<span class="tag tag-checkin">OK</span>`;
+                    } else {
+                        content = `<span style="color:#999; font-style:italic;">--</span>`;
+                    }
+                }
+
+                tr.insertAdjacentHTML('beforeend', `<td>${content}</td>`);
+            });
+            
+            tbody.appendChild(tr);
+        });
+
+        if (filteredData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No se encontraron registros con estos filtros.</td></tr>';
         }
-        
-        window.open(waUrl, '_blank');
     }
 
+    // Iniciar
     loadDatabase();
+
 </script>
 
 </body>
