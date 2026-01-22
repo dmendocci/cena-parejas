@@ -30,7 +30,6 @@
         .btn-action:hover { background: #1ebc57; }
         .btn-action:disabled { background: #ccc; cursor: not-allowed; }
         #loading { text-align: center; padding: 40px; color: #888; }
-        #debugInfo { font-size: 11px; color: #999; margin-top: 20px; text-align: center; font-family: monospace; border-top: 1px solid #eee; padding-top: 10px; }
         #version { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #ccc; }
     </style>
 </head>
@@ -61,11 +60,11 @@
             </div>
             <div class="row">
                 <div class="col">
-                    <label>🤵 Nombre del Esposo (Col <span id="lblColEsposo"></span>):</label>
+                    <label>🤵 Nombre del Esposo:</label>
                     <select id="filterEsposo" onchange="syncCouple('esposo')"><option value="">-- Todos --</option></select>
                 </div>
                 <div class="col">
-                    <label>👰 Nombre de la Esposa (Col <span id="lblColEsposa"></span>):</label>
+                    <label>👰 Nombre de la Esposa:</label>
                     <select id="filterEsposa" onchange="syncCouple('esposa')"><option value="">-- Todas --</option></select>
                 </div>
             </div>
@@ -77,35 +76,32 @@
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
-        <div id="debugInfo"></div>
     </div>
 </div>
-<div id="version">v5.0 - ColFix</div>
+<div id="version">v6.0 - FinalMap</div>
 
 <script>
-    // --- CONFIGURACIÓN ---
+    // --- TU URL DEL SCRIPT (CLON) ---
+    // Asegúrate de que esta sea la URL correcta de tu script clonado
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
+    
+    // IDs Oficiales
     const SHEET_ID = '1slBfBNMEVgWOewNphlFi82fQbs7Y6GtD6Hcplj2D8do';
     const SHEET_GID = '1064363108';
 
     // =========================================================
-    // 🛠️ MAPEO DE COLUMNAS (USANDO LETRAS DE EXCEL)
+    // 🛠️ MAPEO CORREGIDO SEGÚN IMAGEN
     // =========================================================
-    // MODIFICA ESTAS LETRAS SI ESTÁN MAL EN TU HOJA
     const LETRA_ESPOSO    = 'B'; 
-    const LETRA_TEL_ESP   = 'C'; // ¿Posiblemente aquí está el teléfono del esposo?
-    const LETRA_ESPOSA    = 'D'; // ¿Posiblemente aquí está la esposa?
+    const LETRA_TEL_ESP   = 'C'; 
+    const LETRA_ESPOSA    = 'D'; // Antes estaba mal, ahora es D
     const LETRA_TEL_ESPA  = 'E'; 
     const LETRA_PAGO      = 'H'; 
     const LETRA_CHECKIN   = 'I'; 
     // =========================================================
 
-    // Función auxiliar: Convierte Letra a Índice (A=0, B=1...)
-    function L(char) {
-        return char.toUpperCase().charCodeAt(0) - 65;
-    }
+    function L(char) { return char.toUpperCase().charCodeAt(0) - 65; }
 
-    // Convertimos las letras a índices numéricos automáticamente
     const COL_ESPOSO    = L(LETRA_ESPOSO);
     const COL_TEL_ESP   = L(LETRA_TEL_ESP);
     const COL_ESPOSA    = L(LETRA_ESPOSA);
@@ -113,7 +109,6 @@
     const COL_PAGO      = L(LETRA_PAGO);
     const COL_CHECKIN   = L(LETRA_CHECKIN);
 
-    // Títulos para la tabla visual
     const HEADERS_MAP = {
         [COL_ESPOSO]: "Nombre Esposo",
         [COL_ESPOSA]: "Nombre Esposa",
@@ -123,15 +118,9 @@
         [COL_CHECKIN]: "Check-in"
     };
 
-    let allData = []; 
-    let filteredData = [];
-    let sheetHeaders = [];
+    let allData = []; let filteredData = [];
 
     function loadDB() {
-        // Mostrar letras en etiquetas
-        document.getElementById('lblColEsposo').innerText = LETRA_ESPOSO;
-        document.getElementById('lblColEsposa').innerText = LETRA_ESPOSA;
-
         const t = new Date().getTime();
         const s = document.createElement('script');
         s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
@@ -139,18 +128,8 @@
     }
 
     window.processData = function(json) {
-        // Guardamos encabezados reales de Google para Debug
-        sheetHeaders = json.table.cols.map(c => c.label || "?");
         allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
-        
-        // Debug en pantalla (muestra qué está leyendo realmente)
-        document.getElementById('debugInfo').innerHTML = 
-            `DEBUG: Columna ${LETRA_ESPOSO} lee: "${sheetHeaders[COL_ESPOSO] || '?'}" | ` +
-            `Columna ${LETRA_ESPOSA} lee: "${sheetHeaders[COL_ESPOSA] || '?'}"`;
-
-        initDropdowns(); 
-        applyFilters();
-        
+        initDropdowns(); applyFilters();
         document.getElementById('loading').style.display = 'none';
         document.getElementById('mainContent').style.display = 'block';
     };
@@ -159,11 +138,9 @@
         const s1 = document.getElementById('filterEsposo'); 
         const s2 = document.getElementById('filterEsposa');
         
-        // Obtenemos valores únicos
         const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
         const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
         
-        // Limpiamos dropdowns por si acaso
         s1.innerHTML = '<option value="">-- Todos --</option>';
         s2.innerHTML = '<option value="">-- Todas --</option>';
 
@@ -175,20 +152,12 @@
         const v1 = document.getElementById('filterEsposo').value; 
         const v2 = document.getElementById('filterEsposa').value;
         
-        // Búsqueda exacta
         if (source === 'esposo' && v1) {
             const match = allData.find(r => r[COL_ESPOSO] === v1); 
-            if(match) {
-                // Verificamos que el dato destino exista antes de asignarlo
-                const pareja = match[COL_ESPOSA];
-                if (pareja) document.getElementById('filterEsposa').value = pareja;
-            }
+            if(match) document.getElementById('filterEsposa').value = match[COL_ESPOSA];
         } else if (source === 'esposa' && v2) {
             const match = allData.find(r => r[COL_ESPOSA] === v2); 
-            if(match) {
-                const pareja = match[COL_ESPOSO];
-                if (pareja) document.getElementById('filterEsposo').value = pareja;
-            }
+            if(match) document.getElementById('filterEsposo').value = match[COL_ESPOSO];
         }
         applyFilters();
     }
@@ -211,7 +180,6 @@
             if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
 
             let passName = true;
-            // Usamos comparacion laxa por si hay espacios
             if (fEsposo && r[COL_ESPOSO] != fEsposo) passName = false;
             if (fEsposa && r[COL_ESPOSA] != fEsposa) passName = false;
             
@@ -226,7 +194,6 @@
         const thead = document.getElementById('tableHead');
         tbody.innerHTML = ''; thead.innerHTML = '';
         
-        // Columnas a mostrar en orden
         const colsToShow = [COL_ESPOSO, COL_ESPOSA, COL_TEL_ESP, COL_TEL_ESPA, COL_PAGO, COL_CHECKIN];
         
         colsToShow.forEach(colIndex => {
@@ -236,7 +203,6 @@
 
         filteredData.forEach(row => {
             let tr = document.createElement('tr');
-            
             colsToShow.forEach(i => {
                 let val = row[i];
                 if(i === COL_PAGO) {
@@ -312,7 +278,6 @@
             }, 2500);
         }
     }
-    
     loadDB();
 </script>
 </body>
