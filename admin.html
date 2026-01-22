@@ -17,18 +17,34 @@
         label { font-weight: bold; font-size: 0.9rem; color: #555; display: block; margin-bottom: 5px; }
         select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; }
         .count-tag { text-align: right; font-size: 0.85rem; color: #777; margin-top: 5px; }
+        
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 900px; margin-top: 10px; }
         th { background: #2c3e50; color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
         td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
         tr:hover { background: #f9f9f9; }
+        
         .tag { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
         .tag-ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .tag-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .tag-empty { color: #ccc; font-style: italic; }
-        .btn-action { background: #25D366; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        
+        /* Botón Único Unificado */
+        .btn-action { 
+            background: #25D366; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            width: 100%; 
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
         .btn-action:hover { background: #1ebc57; }
         .btn-action:disabled { background: #ccc; cursor: not-allowed; }
+
         #loading { text-align: center; padding: 40px; color: #888; }
     </style>
 </head>
@@ -78,14 +94,21 @@
     </div>
 </div>
 <script>
-    // --- TU NUEVA URL DEL SCRIPT (CLON) ---
+    // --- TU URL DEL SCRIPT (CLON) ---
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
     
     // IDs Oficiales
     const SHEET_ID = '1slBfBNMEVgWOewNphlFi82fQbs7Y6GtD6Hcplj2D8do';
     const SHEET_GID = '1064363108';
 
-    const COL_ESPOSO = 1; const COL_ESPOSA = 2; const COL_TEL = 3; const COL_PAGO = 7; const COL_CHECKIN = 8; const COL_LINK = 9;
+    // MAPEO DE COLUMNAS (A=0, B=1...)
+    const COL_ESPOSO = 1;      // B
+    const COL_ESPOSA = 2;      // C
+    const COL_TEL_ESP = 3;     // D (Tel Esposo)
+    const COL_TEL_ESPA = 4;    // E (Tel Esposa)
+    const COL_PAGO = 7;        // H
+    const COL_CHECKIN = 8;     // I
+    
     let allData = []; let headers = []; let filteredData = [];
 
     function loadDB() {
@@ -146,10 +169,16 @@
     function renderTable() {
         const tbody = document.getElementById('tableBody'); const thead = document.getElementById('tableHead');
         tbody.innerHTML = ''; thead.innerHTML = '';
-        const showCols = [0, 1, 2, 3, COL_PAGO, COL_CHECKIN];
+        
+        // COLUMNAS A MOSTRAR
+        const showCols = [1, 2, 3, 4, COL_PAGO, COL_CHECKIN];
+        
         showCols.forEach(i => {
             let label = headers[i];
-            if(i === COL_PAGO) label = "Estatus Pago"; if(i === COL_CHECKIN) label = "Check-in";
+            if(i === COL_TEL_ESP) label = "Tel. Esposo";
+            if(i === COL_TEL_ESPA) label = "Tel. Esposa";
+            if(i === COL_PAGO) label = "Estatus Pago"; 
+            if(i === COL_CHECKIN) label = "Check-in";
             thead.insertAdjacentHTML('beforeend', `<th>${label}</th>`);
         });
         thead.insertAdjacentHTML('beforeend', `<th>Acción</th>`);
@@ -162,38 +191,65 @@
                 if(i === COL_CHECKIN) val = (val && val.toString() === "OK") ? `<span class="tag tag-ok">OK</span>` : `<span class="tag tag-empty">-</span>`;
                 tr.insertAdjacentHTML('beforeend', `<td>${val}</td>`);
             });
+            
+            // LÓGICA DE BOTÓN ÚNICO
             let tdBtn = document.createElement('td');
             const isPaid = (row[COL_PAGO] || "").toString().toLowerCase().includes("pagado");
-            let btn = document.createElement('button'); btn.className = 'btn-action';
+            
+            let btn = document.createElement('button');
+            btn.className = 'btn-action';
+            
             if(isPaid) {
-                btn.innerText = "📲 Reenviar"; btn.onclick = () => sendWhatsApp(row);
+                btn.innerText = "📲 Reenviar a Ambos";
+                btn.onclick = () => sendSequence(row);
             } else {
-                btn.innerText = "✅ Validar"; btn.onclick = () => validatePay(btn, row, tdBtn);
+                btn.innerText = "✅ Validar y Enviar"; 
+                btn.onclick = () => validatePay(btn, row);
             }
-            tdBtn.appendChild(btn); tr.appendChild(tdBtn); tbody.appendChild(tr);
+            tdBtn.appendChild(btn);
+            tr.appendChild(tdBtn); tbody.appendChild(tr);
         });
     }
 
-    function validatePay(btn, row, container) {
+    function validatePay(btn, row) {
         btn.disabled = true; btn.innerText = "⏳ ...";
         const params = new URLSearchParams(); params.append('accion', 'pagar'); params.append('esposo', row[COL_ESPOSO]); params.append('esposa', row[COL_ESPOSA]);
         fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: params })
         .then(() => {
             setTimeout(() => {
                 row[COL_PAGO] = "Pagado";
-                row[COL_LINK] = `https://dmendocci.github.io/cena-parejas/pase.html?esposo=${encodeURIComponent(row[COL_ESPOSO])}&esposa=${encodeURIComponent(row[COL_ESPOSA])}`;
-                sendWhatsApp(row); applyFilters();
+                // Iniciar secuencia de envío a ambos
+                sendSequence(row);
+                applyFilters(); // Refrescar visualmente
             }, 1000);
         });
     }
 
-    function sendWhatsApp(row) {
-        let tel = (row[COL_TEL] || "").toString().replace(/\D/g, '');
+    // --- SECUENCIA DE ENVÍO AUTOMÁTICA (SIN CONFIRMACIÓN) ---
+    function sendSequence(row) {
         const link = `https://dmendocci.github.io/cena-parejas/pase.html?esposo=${encodeURIComponent(row[COL_ESPOSO])}&esposa=${encodeURIComponent(row[COL_ESPOSA])}`;
         const msg = `¡Hola! Su registro a "Love Night" está confirmado.\n\nSu pase de acceso:\n${link}\n\n¡Los esperamos!`;
-        let url = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-        if(tel.length > 5) url += `&phone=${tel}`;
-        window.open(url, '_blank');
+        
+        let tel1 = (row[COL_TEL_ESP] || "").toString().replace(/\D/g, '');
+        let tel2 = (row[COL_TEL_ESPA] || "").toString().replace(/\D/g, '');
+
+        // 1. Enviar al Esposo
+        if(tel1.length > 5) {
+            let url1 = `https://web.whatsapp.com/send?phone=${tel1}&text=${encodeURIComponent(msg)}`;
+            window.open(url1, '_blank');
+        } else {
+            alert("⚠️ El Esposo no tiene número registrado. No se pudo abrir su chat.");
+        }
+
+        // 2. Enviar a la Esposa (Automático tras 2 segundos)
+        if(tel2.length > 5) {
+            // Usamos un retraso de 2 segundos para dar tiempo a que la primera pestaña abra
+            // y para intentar que el navegador no bloquee el segundo popup.
+            setTimeout(() => {
+                let url2 = `https://web.whatsapp.com/send?phone=${tel2}&text=${encodeURIComponent(msg)}`;
+                window.open(url2, '_blank');
+            }, 2000);
+        }
     }
     loadDB();
 </script>
