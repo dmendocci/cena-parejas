@@ -1,7 +1,117 @@
 <!DOCTYPE html>
-<html>
-<body style="background-color: #fff3e0; font-family: sans-serif; text-align: center; padding: 50px;">
-    <h1>🎫 PASE DE INVITADO (DUMMY)</h1>
-    <p>Aquí aparecerán los nombres de los novios y su código QR.</p>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu Pase de Boda</title>
+    <style>
+        body { 
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+            background: #fdfbf7; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            color: #333;
+        }
+        .ticket {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            border-top: 5px solid #d4af37; /* Dorado */
+            max-width: 320px;
+            width: 85%;
+            position: relative;
+        }
+        h1 { color: #d4af37; margin-bottom: 5px; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
+        .subtitle { font-size: 0.9rem; color: #777; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .names { 
+            font-weight: bold; 
+            font-size: 1.6rem; 
+            color: #2c3e50; 
+            margin: 20px 0; 
+            line-height: 1.3;
+        }
+        
+        #qrcode { 
+            margin: 25px auto; 
+            display: flex; 
+            justify-content: center; 
+            padding: 10px;
+            background: white;
+        }
+        
+        .footer { margin-top: 30px; font-size: 0.75rem; color: #999; line-height: 1.5; }
+        .status-badge {
+            display: inline-block;
+            background: #e8f8f5;
+            color: #27ae60;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border: 1px solid #a9dfbf;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+    <div class="ticket">
+        <h1>Pase de Entrada</h1>
+        <div class="subtitle">Boda & Celebración</div>
+        
+        <div class="status-badge">✅ ACCESO CONFIRMADO</div>
+
+        <div class="names" id="guestNames">Cargando...</div>
+        
+        <div id="qrcode"></div>
+        
+        <div class="footer">
+            Presenta este código al llegar.<br>
+            Válido para un único ingreso.
+        </div>
+    </div>
+
+<script>
+    // 1. LEER LOS NOMBRES DEL ENLACE (URL)
+    // El enlace viene así: .../pase.html?esposo=Dennis&esposa=Flor
+    const params = new URLSearchParams(window.location.search);
+    const esposo = params.get('esposo');
+    const esposoLimpio = esposo ? decodeURIComponent(esposo) : "";
+    
+    const esposa = params.get('esposa');
+    const esposaLimpia = esposa ? decodeURIComponent(esposa) : "";
+
+    if (esposoLimpio && esposaLimpia) {
+        // Mostrar nombres en pantalla
+        document.getElementById('guestNames').innerText = `${esposoLimpio} & ${esposaLimpia}`;
+
+        // Generar QR
+        // IMPORTANTE: Este texto debe coincidir con lo que espera el Escáner
+        const qrContent = `BODA: ${esposoLimpio} & ${esposaLimpia}\nESTADO: PAGADO`;
+        
+        new QRCode(document.getElementById("qrcode"), {
+            text: qrContent,
+            width: 180,
+            height: 180,
+            colorDark : "#2c3e50",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.M
+        });
+    } else {
+        document.getElementById('guestNames').innerText = "Enlace incompleto";
+        document.getElementById('guestNames').style.color = "red";
+        document.getElementById('qrcode').innerText = "No se encontraron los nombres en el enlace.";
+    }
+</script>
+
 </body>
 </html>
