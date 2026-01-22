@@ -17,28 +17,20 @@
         label { font-weight: bold; font-size: 0.9rem; color: #555; display: block; margin-bottom: 5px; }
         select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; }
         .count-tag { text-align: right; font-size: 0.85rem; color: #777; margin-top: 5px; }
-        
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 1000px; margin-top: 10px; }
         th { background: #2c3e50; color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
         td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 0.9rem; }
         tr:hover { background: #f9f9f9; }
-        
         .tag { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
         .tag-ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .tag-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .tag-empty { color: #ccc; font-style: italic; }
-        
-        .btn-action { 
-            background: #25D366; color: white; border: none; padding: 10px 15px; 
-            border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; 
-            font-size: 0.9rem; transition: background 0.3s;
-        }
+        .btn-action { background: #25D366; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 0.9rem; transition: background 0.3s; }
         .btn-action:hover { background: #1ebc57; }
         .btn-action:disabled { background: #ccc; cursor: not-allowed; }
-
         #loading { text-align: center; padding: 40px; color: #888; }
-        /* Marca de versión para verificar actualización */
+        #debugInfo { font-size: 11px; color: #999; margin-top: 20px; text-align: center; font-family: monospace; border-top: 1px solid #eee; padding-top: 10px; }
         #version { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #ccc; }
     </style>
 </head>
@@ -69,11 +61,11 @@
             </div>
             <div class="row">
                 <div class="col">
-                    <label>🤵 Nombre del Esposo:</label>
+                    <label>🤵 Nombre del Esposo (Col <span id="lblColEsposo"></span>):</label>
                     <select id="filterEsposo" onchange="syncCouple('esposo')"><option value="">-- Todos --</option></select>
                 </div>
                 <div class="col">
-                    <label>👰 Nombre de la Esposa:</label>
+                    <label>👰 Nombre de la Esposa (Col <span id="lblColEsposa"></span>):</label>
                     <select id="filterEsposa" onchange="syncCouple('esposa')"><option value="">-- Todas --</option></select>
                 </div>
             </div>
@@ -85,32 +77,44 @@
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
+        <div id="debugInfo"></div>
     </div>
 </div>
-<div id="version">v4.0 - Prod</div>
+<div id="version">v5.0 - ColFix</div>
 
 <script>
-    // --- URL DEL SCRIPT (TU CLON) ---
+    // --- CONFIGURACIÓN ---
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
-    
-    // IDs Oficiales
     const SHEET_ID = '1slBfBNMEVgWOewNphlFi82fQbs7Y6GtD6Hcplj2D8do';
     const SHEET_GID = '1064363108';
 
-    // MAPEO DE COLUMNAS (A=0, B=1...)
-    // IMPORTANTE: Asegúrate de que en tu Excel la Columna E sea Tel Esposa (índice 4)
-    const COL_ESPOSO = 1;      // B
-    const COL_ESPOSA = 2;      // C
-    const COL_TEL_ESP = 3;     // D (Tel Esposo)
-    const COL_TEL_ESPA = 4;    // E (Tel Esposa) <-- AQUÍ ESTÁ EL NUEVO
-    const COL_PAGO = 7;        // H
-    const COL_CHECKIN = 8;     // I
-    
-    let allData = []; 
-    let filteredData = [];
+    // =========================================================
+    // 🛠️ MAPEO DE COLUMNAS (USANDO LETRAS DE EXCEL)
+    // =========================================================
+    // MODIFICA ESTAS LETRAS SI ESTÁN MAL EN TU HOJA
+    const LETRA_ESPOSO    = 'B'; 
+    const LETRA_TEL_ESP   = 'C'; // ¿Posiblemente aquí está el teléfono del esposo?
+    const LETRA_ESPOSA    = 'D'; // ¿Posiblemente aquí está la esposa?
+    const LETRA_TEL_ESPA  = 'E'; 
+    const LETRA_PAGO      = 'H'; 
+    const LETRA_CHECKIN   = 'I'; 
+    // =========================================================
 
-    // TÍTULOS MANUALES (Para ignorar lo que diga Google)
-    const CUSTOM_HEADERS = {
+    // Función auxiliar: Convierte Letra a Índice (A=0, B=1...)
+    function L(char) {
+        return char.toUpperCase().charCodeAt(0) - 65;
+    }
+
+    // Convertimos las letras a índices numéricos automáticamente
+    const COL_ESPOSO    = L(LETRA_ESPOSO);
+    const COL_TEL_ESP   = L(LETRA_TEL_ESP);
+    const COL_ESPOSA    = L(LETRA_ESPOSA);
+    const COL_TEL_ESPA  = L(LETRA_TEL_ESPA);
+    const COL_PAGO      = L(LETRA_PAGO);
+    const COL_CHECKIN   = L(LETRA_CHECKIN);
+
+    // Títulos para la tabla visual
+    const HEADERS_MAP = {
         [COL_ESPOSO]: "Nombre Esposo",
         [COL_ESPOSA]: "Nombre Esposa",
         [COL_TEL_ESP]: "Tel. Esposo",
@@ -119,7 +123,15 @@
         [COL_CHECKIN]: "Check-in"
     };
 
+    let allData = []; 
+    let filteredData = [];
+    let sheetHeaders = [];
+
     function loadDB() {
+        // Mostrar letras en etiquetas
+        document.getElementById('lblColEsposo').innerText = LETRA_ESPOSO;
+        document.getElementById('lblColEsposa').innerText = LETRA_ESPOSA;
+
         const t = new Date().getTime();
         const s = document.createElement('script');
         s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
@@ -127,9 +139,15 @@
     }
 
     window.processData = function(json) {
-        // Obtenemos solo los datos brutos
+        // Guardamos encabezados reales de Google para Debug
+        sheetHeaders = json.table.cols.map(c => c.label || "?");
         allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
         
+        // Debug en pantalla (muestra qué está leyendo realmente)
+        document.getElementById('debugInfo').innerHTML = 
+            `DEBUG: Columna ${LETRA_ESPOSO} lee: "${sheetHeaders[COL_ESPOSO] || '?'}" | ` +
+            `Columna ${LETRA_ESPOSA} lee: "${sheetHeaders[COL_ESPOSA] || '?'}"`;
+
         initDropdowns(); 
         applyFilters();
         
@@ -140,10 +158,15 @@
     function initDropdowns() {
         const s1 = document.getElementById('filterEsposo'); 
         const s2 = document.getElementById('filterEsposa');
-        // Filtramos y ordenamos nombres únicos
+        
+        // Obtenemos valores únicos
         const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
         const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
         
+        // Limpiamos dropdowns por si acaso
+        s1.innerHTML = '<option value="">-- Todos --</option>';
+        s2.innerHTML = '<option value="">-- Todas --</option>';
+
         list1.forEach(x => s1.add(new Option(x, x))); 
         list2.forEach(x => s2.add(new Option(x, x)));
     }
@@ -151,12 +174,21 @@
     function syncCouple(source) {
         const v1 = document.getElementById('filterEsposo').value; 
         const v2 = document.getElementById('filterEsposa').value;
+        
+        // Búsqueda exacta
         if (source === 'esposo' && v1) {
             const match = allData.find(r => r[COL_ESPOSO] === v1); 
-            if(match) document.getElementById('filterEsposa').value = match[COL_ESPOSA];
+            if(match) {
+                // Verificamos que el dato destino exista antes de asignarlo
+                const pareja = match[COL_ESPOSA];
+                if (pareja) document.getElementById('filterEsposa').value = pareja;
+            }
         } else if (source === 'esposa' && v2) {
             const match = allData.find(r => r[COL_ESPOSA] === v2); 
-            if(match) document.getElementById('filterEsposo').value = match[COL_ESPOSO];
+            if(match) {
+                const pareja = match[COL_ESPOSO];
+                if (pareja) document.getElementById('filterEsposo').value = pareja;
+            }
         }
         applyFilters();
     }
@@ -179,8 +211,9 @@
             if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
 
             let passName = true;
-            if (fEsposo && r[COL_ESPOSO] !== fEsposo) passName = false;
-            if (fEsposa && r[COL_ESPOSA] !== fEsposa) passName = false;
+            // Usamos comparacion laxa por si hay espacios
+            if (fEsposo && r[COL_ESPOSO] != fEsposo) passName = false;
+            if (fEsposa && r[COL_ESPOSA] != fEsposa) passName = false;
             
             return passPago && passCheck && passName;
         });
@@ -191,44 +224,35 @@
     function renderTable() {
         const tbody = document.getElementById('tableBody'); 
         const thead = document.getElementById('tableHead');
-        tbody.innerHTML = ''; 
-        thead.innerHTML = '';
+        tbody.innerHTML = ''; thead.innerHTML = '';
         
-        // --- COLUMNAS A MOSTRAR (Manual y estricto) ---
-        // 1=Esposo, 2=Esposa, 3=Tel1, 4=Tel2, 7=Pago, 8=Checkin
-        // NOTA: EL índice 0 (Marca temporal) NO está aquí, así que no se dibujará.
+        // Columnas a mostrar en orden
         const colsToShow = [COL_ESPOSO, COL_ESPOSA, COL_TEL_ESP, COL_TEL_ESPA, COL_PAGO, COL_CHECKIN];
         
-        // Generar Encabezados Manualmente
         colsToShow.forEach(colIndex => {
-            thead.insertAdjacentHTML('beforeend', `<th>${CUSTOM_HEADERS[colIndex]}</th>`);
+            thead.insertAdjacentHTML('beforeend', `<th>${HEADERS_MAP[colIndex]}</th>`);
         });
         thead.insertAdjacentHTML('beforeend', `<th>Acción</th>`);
 
-        // Generar Filas
         filteredData.forEach(row => {
             let tr = document.createElement('tr');
             
             colsToShow.forEach(i => {
                 let val = row[i];
-                // Formato visual
                 if(i === COL_PAGO) {
                     val = (val && val.toString().toLowerCase().includes("pagado")) 
                         ? `<span class="tag tag-ok">Pagado</span>` 
                         : `<span class="tag tag-pending">Pendiente</span>`;
-                }
-                if(i === COL_CHECKIN) {
+                } else if(i === COL_CHECKIN) {
                     val = (val && val.toString() === "OK") 
                         ? `<span class="tag tag-ok">OK</span>` 
                         : `<span class="tag tag-empty">-</span>`;
+                } else {
+                     if (val === undefined || val === null) val = "";
                 }
-                // Si es undefined (caso de la columna E vacía), poner guión
-                if (val === undefined || val === null) val = "";
-                
                 tr.insertAdjacentHTML('beforeend', `<td>${val}</td>`);
             });
             
-            // Botón
             let tdBtn = document.createElement('td');
             const isPaid = (row[COL_PAGO] || "").toString().toLowerCase().includes("pagado");
             let btn = document.createElement('button');
@@ -255,14 +279,13 @@
         params.append('esposa', row[COL_ESPOSA]);
         
         fetch(APPS_SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
+            method: 'POST', mode: 'no-cors', 
             headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
             body: params 
         }).then(() => {
             setTimeout(() => {
                 row[COL_PAGO] = "Pagado";
-                sendSequence(row); // Iniciar envío automático
+                sendSequence(row); 
                 applyFilters(); 
             }, 1000);
         });
@@ -273,9 +296,8 @@
         const msg = `¡Hola! Su registro a "Love Night" está confirmado.\n\nSu pase de acceso:\n${link}\n\n¡Los esperamos!`;
         
         let tel1 = (row[COL_TEL_ESP] || "").toString().replace(/\D/g, '');
-        let tel2 = (row[COL_TEL_ESPA] || "").toString().replace(/\D/g, ''); // Telefono Esposa (Col E)
+        let tel2 = (row[COL_TEL_ESPA] || "").toString().replace(/\D/g, '');
 
-        // 1. Enviar al Esposo
         if(tel1.length > 5) {
             let url1 = `https://web.whatsapp.com/send?phone=${tel1}&text=${encodeURIComponent(msg)}`;
             window.open(url1, '_blank');
@@ -283,18 +305,14 @@
             alert("⚠️ El Esposo no tiene número registrado.");
         }
 
-        // 2. Enviar a la Esposa (Automático tras 2.5 seg para evitar bloqueo)
         if(tel2.length > 5) {
             setTimeout(() => {
                 let url2 = `https://web.whatsapp.com/send?phone=${tel2}&text=${encodeURIComponent(msg)}`;
                 window.open(url2, '_blank');
             }, 2500);
-        } else {
-            console.log("Esposa sin número registrado en columna E");
         }
     }
     
-    // Iniciar
     loadDB();
 </script>
 </body>
