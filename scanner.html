@@ -5,234 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portero - Control Boda</title>
     <style>
-        /* Diseño oscuro optimizado para baterías y noche */
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; 
-            background: #000000; 
-            color: #e0e0e0; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh;
-        }
-        
+        body { font-family: 'Segoe UI', sans-serif; background: #000000; color: #e0e0e0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         h2 { margin: 10px 0 20px 0; color: #ffffff; text-align: center; font-weight: 300; letter-spacing: 1px; font-size: 1.5rem; }
-        
-        /* Contenedor del video */
-        #reader { 
-            width: 100%; 
-            max-width: 500px; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            border: 2px solid #333; 
-            background: #111; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        
-        /* Tarjeta de Resultados */
-        #resultArea { 
-            margin-top: 20px; 
-            width: 100%; 
-            max-width: 480px; 
-            display: none; 
-            animation: slideUp 0.3s ease-out;
-        }
-        
-        .card { 
-            background: #1e1e1e; 
-            color: white; 
-            padding: 25px; 
-            border-radius: 15px; 
-            text-align: center;
-            box-shadow: 0 4px 25px rgba(0,0,0,0.4); 
-            border: 1px solid #333;
-        }
-        
-        .names { 
-            font-size: 1.5rem; 
-            font-weight: bold; 
-            color: #ffffff; 
-            margin: 15px 0; 
-            padding-bottom: 15px; 
-            border-bottom: 1px solid #333; 
-            line-height: 1.3;
-        }
-        
-        /* Estados */
+        #reader { width: 100%; max-width: 500px; border-radius: 12px; overflow: hidden; border: 2px solid #333; background: #111; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        #resultArea { margin-top: 20px; width: 100%; max-width: 480px; display: none; }
+        .card { background: #1e1e1e; color: white; padding: 25px; border-radius: 15px; text-align: center; box-shadow: 0 4px 25px rgba(0,0,0,0.4); border: 1px solid #333; }
+        .names { font-size: 1.5rem; font-weight: bold; color: #ffffff; margin: 15px 0; padding-bottom: 15px; border-bottom: 1px solid #333; line-height: 1.3; }
         .msg-success { color: #00e676; font-weight: 800; font-size: 1.4rem; margin-bottom: 5px; }
         .msg-warning { color: #ffab40; font-weight: 800; font-size: 1.2rem; margin-bottom: 5px; }
         .msg-error { color: #ff5252; font-weight: bold; font-size: 1.1rem; }
-        
         .time-stamp { font-size: 0.9rem; color: #aaa; margin-top: 5px; font-family: monospace; }
         .icon-large { font-size: 3.5rem; margin-bottom: 10px; display: block; }
-
-        /* Botón */
-        #btnReset { 
-            display: block; 
-            width: 100%; 
-            padding: 16px; 
-            margin-top: 20px; 
-            background: #2196f3; 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 1.1rem; 
-            font-weight: 600;
-            cursor: pointer; 
-        }
-        #btnReset:active { background: #1976d2; transform: scale(0.98); }
-
+        #btnReset { display: block; width: 100%; padding: 16px; margin-top: 20px; background: #2196f3; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; }
         .loader { border: 4px solid #333; border-top: 4px solid #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
-
     <h2>📷 Escáner de Entrada</h2>
-    
     <div id="reader"></div>
-
-    <div id="resultArea">
-        <div class="card">
-            <span id="statusIcon" class="icon-large">⏳</span>
-            <div class="names" id="guestNames">Leyendo...</div>
-            
-            <div id="statusMessage"></div>
-            <div id="timeMessage" class="time-stamp"></div>
-            
-            <div id="loadingSpinner" class="loader" style="display:none;"></div>
-            
-            <button id="btnReset" onclick="resetScanner()">Escanear Siguiente</button>
-        </div>
-    </div>
-
+    <div id="resultArea"><div class="card"><span id="statusIcon" class="icon-large">⏳</span><div class="names" id="guestNames">Leyendo...</div><div id="statusMessage"></div><div id="timeMessage" class="time-stamp"></div><div id="loadingSpinner" class="loader" style="display:none;"></div><button id="btnReset" onclick="resetScanner()">Escanear Siguiente</button></div></div>
 <script>
-    // --- TU URL DEL SCRIPT ---
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxV9Xrkhp_sXg3flJj1FcyOPe0Is8fb7pOWhRoMg7Yz2ZOzK8d0PTDdllPpDPM2lU1-Hg/exec"; 
+    // --- TU NUEVA URL DEL SCRIPT (CLON) ---
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
 
-    let html5QrcodeScanner;
-    let isScanning = true;
-
+    let html5QrcodeScanner; let isScanning = true;
     function onScanSuccess(decodedText, decodedResult) {
-        if (!isScanning) return;
-        isScanning = false;
-        if (html5QrcodeScanner) html5QrcodeScanner.clear();
-
-        showUIState('loading');
-
+        if (!isScanning) return; isScanning = false; if (html5QrcodeScanner) html5QrcodeScanner.clear(); showUIState('loading');
         try {
-            // Formato esperado: "BODA: Juan & Maria\nESTADO: PAGADO"
             if (!decodedText.includes("BODA:")) throw new Error("QR no válido");
-
             let rawNames = decodedText.split('\n')[0].replace("BODA:", "").trim();
-            // Separador puede ser "&" o " y "
-            let splitChar = rawNames.includes("&") ? "&" : " y ";
-            let parts = rawNames.split(splitChar);
-            
-            let esposo = parts[0] ? parts[0].trim() : "";
-            let esposa = parts[1] ? parts[1].trim() : "";
-
+            let splitChar = rawNames.includes("&") ? "&" : " y "; let parts = rawNames.split(splitChar);
+            let esposo = parts[0] ? parts[0].trim() : ""; let esposa = parts[1] ? parts[1].trim() : "";
             document.getElementById('guestNames').innerText = rawNames;
-
             verifyGuest(esposo, esposa);
-
-        } catch (e) {
-            showUIState('error', "QR Inválido: " + e.message);
-        }
+        } catch (e) { showUIState('error', "QR Inválido: " + e.message); }
     }
-
     function verifyGuest(esposo, esposa) {
-        const params = new URLSearchParams();
-        params.append('accion', 'confirmar');
-        params.append('esposo', esposo);
-        params.append('esposa', esposa);
-
-        fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.result === "success") {
-                showUIState('success', "¡BIENVENIDOS!", "Hora: " + data.message);
-            } else if (data.result === "duplicate") {
-                showUIState('duplicate', "⚠️ YA INGRESARON", "Hora previa: " + data.message);
-            } else {
-                showUIState('error', "Error: " + data.message);
-            }
-        })
-        .catch(err => showUIState('error', "Error de Conexión"));
+        const params = new URLSearchParams(); params.append('accion', 'confirmar'); params.append('esposo', esposo); params.append('esposa', esposa);
+        fetch(APPS_SCRIPT_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params })
+        .then(res => res.json()).then(data => {
+            if (data.result === "success") { showUIState('success', "¡BIENVENIDOS!", "Hora: " + data.message); } 
+            else if (data.result === "duplicate") { showUIState('duplicate', "⚠️ YA INGRESARON", "Hora previa: " + data.message); } 
+            else { showUIState('error', "Error: " + data.message); }
+        }).catch(err => showUIState('error', "Error de Conexión"));
     }
-
     function showUIState(state, mainMsg = "", subMsg = "") {
-        const resultArea = document.getElementById('resultArea');
-        const reader = document.getElementById('reader');
-        const spinner = document.getElementById('loadingSpinner');
-        const icon = document.getElementById('statusIcon');
-        const msgDiv = document.getElementById('statusMessage');
-        const timeDiv = document.getElementById('timeMessage');
-        const btn = document.getElementById('btnReset');
-
-        reader.style.display = 'none';
-        resultArea.style.display = 'block';
-        msgDiv.className = "";
-
-        if (state === 'loading') {
-            icon.innerText = "⏳";
-            msgDiv.innerText = "Verificando...";
-            spinner.style.display = 'block';
-            btn.style.display = 'none';
-        } else {
-            spinner.style.display = 'none';
-            btn.style.display = 'block';
-            msgDiv.innerText = mainMsg;
-            timeDiv.innerText = subMsg;
-
-            if (state === 'success') {
-                icon.innerText = "✅";
-                msgDiv.className = "msg-success";
-                playSound(true);
-            } else if (state === 'duplicate') {
-                icon.innerText = "⛔";
-                msgDiv.className = "msg-warning";
-                playSound(false);
-            } else {
-                icon.innerText = "❌";
-                msgDiv.className = "msg-error";
-                playSound(false);
-            }
+        const resultArea = document.getElementById('resultArea'); const reader = document.getElementById('reader'); const spinner = document.getElementById('loadingSpinner'); const icon = document.getElementById('statusIcon'); const msgDiv = document.getElementById('statusMessage'); const timeDiv = document.getElementById('timeMessage'); const btn = document.getElementById('btnReset');
+        reader.style.display = 'none'; resultArea.style.display = 'block'; msgDiv.className = "";
+        if (state === 'loading') { icon.innerText = "⏳"; msgDiv.innerText = "Verificando..."; spinner.style.display = 'block'; btn.style.display = 'none'; } 
+        else {
+            spinner.style.display = 'none'; btn.style.display = 'block'; msgDiv.innerText = mainMsg; timeDiv.innerText = subMsg;
+            if (state === 'success') { icon.innerText = "✅"; msgDiv.className = "msg-success"; playSound(true); } 
+            else if (state === 'duplicate') { icon.innerText = "⛔"; msgDiv.className = "msg-warning"; playSound(false); } 
+            else { icon.innerText = "❌"; msgDiv.className = "msg-error"; playSound(false); }
         }
     }
-
-    function resetScanner() {
-        document.getElementById('resultArea').style.display = 'none';
-        document.getElementById('reader').style.display = 'block';
-        isScanning = true;
-        startCamera();
-    }
-
-    function startCamera() {
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, aspectRatio: 1.0 }, false);
-        html5QrcodeScanner.render(onScanSuccess, (e) => {});
-    }
-
-    function playSound(success) {
-        // Tono simple
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        osc.connect(ctx.destination);
-        osc.frequency.value = success ? 1000 : 200;
-        osc.type = success ? 'sine' : 'sawtooth';
-        osc.start();
-        setTimeout(() => osc.stop(), 300);
-    }
-
+    function resetScanner() { document.getElementById('resultArea').style.display = 'none'; document.getElementById('reader').style.display = 'block'; isScanning = true; startCamera(); }
+    function startCamera() { html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, aspectRatio: 1.0 }, false); html5QrcodeScanner.render(onScanSuccess, (e) => {}); }
+    function playSound(success) { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); osc.connect(ctx.destination); osc.frequency.value = success ? 1000 : 200; osc.type = success ? 'sine' : 'sawtooth'; osc.start(); setTimeout(() => osc.stop(), 300); }
     startCamera();
 </script>
-
 </body>
 </html>
