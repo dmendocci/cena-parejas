@@ -3,150 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-
     <title>Admin - Love Night</title>
     <style>
-        /* --- ESTILOS GENERALES --- */
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: #fdfbf7; /* Tono crema suave/romántico */
-            color: #4a4a4a; 
-            padding: 20px; 
-            margin: 0;
-        }
-
-        .container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
-            border-top: 6px solid #d4af37; /* Dorado elegante */
-        }
-
-        h1 { 
-            text-align: center; 
-            color: #d4af37; 
-            margin-bottom: 30px; 
-            font-weight: 300; 
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-size: 1.8rem;
-        }
-
-        /* --- SECCIÓN DE FILTROS --- */
-        .filters-panel {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-            border: 1px solid #e9ecef;
-        }
-
-        .filter-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            flex: 1;
-            min-width: 250px;
-        }
-
-        label { 
-            font-weight: bold; 
-            display: block; 
-            margin-bottom: 8px; 
-            color: #2c3e50; 
-            font-size: 0.9rem;
-        }
-
-        select { 
-            width: 100%; 
-            padding: 12px; 
-            border-radius: 6px; 
-            border: 1px solid #ccc; 
-            background: white;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: border-color 0.3s;
-        }
-        select:focus { border-color: #d4af37; outline: none; }
-
-        /* --- TABLA --- */
-        .table-responsive { overflow-x: auto; }
-        
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            min-width: 900px; 
-            margin-top: 10px;
-        }
-
-        th { 
-            background: #2c3e50; 
-            color: white; 
-            padding: 15px; 
-            text-align: left; 
-            font-size: 0.95rem;
-        }
-
-        td { 
-            padding: 14px; 
-            border-bottom: 1px solid #eee; 
-            vertical-align: middle; 
-        }
-
-        tr:nth-child(even) { background-color: #fcfcfc; }
-        tr:hover { background-color: #f1f1f1; }
-
-        /* --- ETIQUETAS DE ESTADO --- */
-        .tag {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            display: inline-block;
-        }
-        .tag-pagado { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .tag-pendiente { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .tag-checkin { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
-
-        #loading { text-align: center; padding: 50px; color: #888; font-size: 1.2rem; }
-        .total-count { text-align: right; margin-top: 10px; color: #666; font-size: 0.9rem; }
-        
-        /* Ocultar elementos hasta cargar */
-        #contentArea { display: none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #fdfbf7; color: #333; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-top: 5px solid #d4af37; }
+        h1 { text-align: center; color: #d4af37; margin-bottom: 30px; font-weight: 300; letter-spacing: 1px; font-size: 1.8rem; text-transform: uppercase; }
+        .filters-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; margin-bottom: 20px; }
+        .row { display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 250px; }
+        label { font-weight: bold; font-size: 0.9rem; color: #555; display: block; margin-bottom: 5px; }
+        select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; }
+        .count-tag { text-align: right; font-size: 0.85rem; color: #777; margin-top: 5px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; margin-top: 10px; }
+        th { background: #2c3e50; color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
+        td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        tr:hover { background: #f9f9f9; }
+        .tag { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
+        .tag-ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .tag-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .tag-empty { color: #ccc; font-style: italic; }
+        .btn-action { background: #25D366; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-action:hover { background: #1ebc57; }
+        .btn-action:disabled { background: #ccc; cursor: not-allowed; }
+        #loading { text-align: center; padding: 40px; color: #888; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>Sistema de registro de cena de parejas - "Love Night"</h1>
-
-    <div id="loading">⏳ Cargando base de datos segura...</div>
-
-    <div id="contentArea">
-        <div class="filters-panel">
-            
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label>💰 Listar por estatus de pago:</label>
+    <div id="loading">⏳ Cargando base de datos oficial...</div>
+    <div id="mainContent" style="display:none;">
+        <div class="filters-box">
+            <div class="row">
+                <div class="col">
+                    <label>💰 Estatus de Pago:</label>
                     <select id="filterPago" onchange="applyFilters()">
                         <option value="todos">Todos</option>
                         <option value="pendientes">Pendientes (Sin pago)</option>
                         <option value="pagados">Pagados</option>
                     </select>
                 </div>
-                <div class="filter-group">
-                    <label>✅ Check in confirmado:</label>
+                <div class="col">
+                    <label>✅ Check-in Confirmado:</label>
                     <select id="filterCheckIn" onchange="applyFilters()">
                         <option value="default" selected>Seleccione una opción</option>
                         <option value="confirmado">Confirmado (OK)</option>
@@ -155,221 +57,145 @@
                     </select>
                 </div>
             </div>
-
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label>🤵 Nombre del esposo:</label>
-                    <select id="filterEsposo" onchange="applyFilters('esposo')">
-                        <option value="">-- Todos --</option>
-                    </select>
+            <div class="row">
+                <div class="col">
+                    <label>🤵 Nombre del Esposo:</label>
+                    <select id="filterEsposo" onchange="syncCouple('esposo')"><option value="">-- Todos --</option></select>
                 </div>
-                <div class="filter-group">
-                    <label>👰 Nombre de la esposa:</label>
-                    <select id="filterEsposa" onchange="applyFilters('esposa')">
-                        <option value="">-- Todas --</option>
-                    </select>
+                <div class="col">
+                    <label>👰 Nombre de la Esposa:</label>
+                    <select id="filterEsposa" onchange="syncCouple('esposa')"><option value="">-- Todas --</option></select>
                 </div>
             </div>
-            
-            <div class="total-count" id="recordCount">Registros encontrados: 0</div>
+            <div class="count-tag" id="countDisplay">Registros: 0</div>
         </div>
-
-        <div class="table-responsive">
+        <div class="table-wrap">
             <table id="dataTable">
-                <thead>
-                    <tr id="tableHead">
-                        </tr>
-                </thead>
+                <thead><tr id="tableHead"></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
     </div>
 </div>
-
 <script>
-    // ======================================================
-    // ⚙️ CONFIGURACIÓN DE CONEXIÓN
-    // ======================================================
+    // --- TU NUEVA URL DEL SCRIPT (CLON) ---
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
+    
+    // IDs Oficiales
     const SHEET_ID = '1slBfBNMEVgWOewNphlFi82fQbs7Y6GtD6Hcplj2D8do';
     const SHEET_GID = '1064363108';
 
-    // 🗺️ MAPEO DE COLUMNAS (Indices comienzan en 0)
-    // Col A=0, B=1, C=2 ... H=7, I=8
-    const COL_ESPOSO = 1;      // Columna B
-    const COL_ESPOSA = 2;      // Columna C
-    const COL_PAGO = 7;        // Columna H (Estatus Pago)
-    const COL_CHECKIN = 8;     // Columna I (Check In) - Asumido como la siguiente a Pago
-    
-    // ======================================================
+    const COL_ESPOSO = 1; const COL_ESPOSA = 2; const COL_TEL = 3; const COL_PAGO = 7; const COL_CHECKIN = 8; const COL_LINK = 9;
+    let allData = []; let headers = []; let filteredData = [];
 
-    let allData = [];
-    let headers = [];
-    let filteredData = [];
-
-    // 1. CARGA DE DATOS (Anti-Caché)
-    function loadDatabase() {
-        const t = new Date().getTime(); 
-        const script = document.createElement('script');
-        // Usamos la API de visualización para leer datos sin exponer el link de edición
-        script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
-        document.body.appendChild(script);
+    function loadDB() {
+        const t = new Date().getTime();
+        const s = document.createElement('script');
+        s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}`;
+        document.body.appendChild(s);
     }
 
-    // 2. PROCESAMIENTO INICIAL
     window.processData = function(json) {
-        // Extraer encabezados
-        headers = json.table.cols.map(c => c.label || "Columna");
-        
-        // Extraer filas
+        headers = json.table.cols.map(c => c.label || "Col");
         allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
-        
-        // Inicializar Dropdowns de Nombres
-        populateNameDropdowns();
-        
-        // Aplicar filtro inicial (mostrar todos)
-        applyFilters();
-
-        // Mostrar interfaz
+        initDropdowns(); applyFilters();
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('contentArea').style.display = 'block';
+        document.getElementById('mainContent').style.display = 'block';
     };
 
-    // 3. LLENAR DROPDOWNS DE NOMBRES
-    function populateNameDropdowns() {
-        const selEsposo = document.getElementById('filterEsposo');
-        const selEsposa = document.getElementById('filterEsposa');
-        
-        const listEsposos = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
-        const listEsposas = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
-
-        listEsposos.forEach(n => selEsposo.add(new Option(n, n)));
-        listEsposas.forEach(n => selEsposa.add(new Option(n, n)));
+    function initDropdowns() {
+        const s1 = document.getElementById('filterEsposo'); const s2 = document.getElementById('filterEsposa');
+        const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
+        const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
+        list1.forEach(x => s1.add(new Option(x, x))); list2.forEach(x => s2.add(new Option(x, x)));
     }
 
-    // 4. LÓGICA DE FILTRADO MAESTRO
-    function applyFilters(changedSource) {
-        // Obtener valores de los filtros
-        const valPago = document.getElementById('filterPago').value;
-        const valCheckIn = document.getElementById('filterCheckIn').value;
-        let valEsposo = document.getElementById('filterEsposo').value;
-        let valEsposa = document.getElementById('filterEsposa').value;
-
-        // Lógica de sincronización de pareja (si seleccionas esposo, se selecciona esposa)
-        if (changedSource === 'esposo' && valEsposo) {
-            const match = allData.find(r => r[COL_ESPOSO] === valEsposo);
-            if (match) {
-                valEsposa = match[COL_ESPOSA];
-                document.getElementById('filterEsposa').value = valEsposa;
-            }
-        } else if (changedSource === 'esposa' && valEsposa) {
-            const match = allData.find(r => r[COL_ESPOSA] === valEsposa);
-            if (match) {
-                valEsposo = match[COL_ESPOSO];
-                document.getElementById('filterEsposo').value = valEsposo;
-            }
+    function syncCouple(source) {
+        const v1 = document.getElementById('filterEsposo').value; const v2 = document.getElementById('filterEsposa').value;
+        if (source === 'esposo' && v1) {
+            const match = allData.find(r => r[COL_ESPOSO] === v1); if(match) document.getElementById('filterEsposa').value = match[COL_ESPOSA];
+        } else if (source === 'esposa' && v2) {
+            const match = allData.find(r => r[COL_ESPOSA] === v2); if(match) document.getElementById('filterEsposo').value = match[COL_ESPOSO];
         }
-
-        // --- FILTRADO ---
-        filteredData = allData.filter(row => {
-            let passPago = true;
-            let passCheckIn = true;
-            let passNombres = true;
-
-            // A. Filtro de Pago
-            const estadoPago = (row[COL_PAGO] || "").toString().toLowerCase().trim();
-            if (valPago === 'pendientes') {
-                // Pasa si está vacío O no dice "pagado"
-                passPago = (estadoPago === "");
-            } else if (valPago === 'pagados') {
-                passPago = estadoPago.includes("pagado");
-            }
-
-            // B. Filtro de Check-in
-            const estadoCheckIn = (row[COL_CHECKIN] || "").toString().toLowerCase().trim();
-            // Si es "default", ignoramos este filtro (pasa todo)
-            if (valCheckIn !== 'default' && valCheckIn !== 'todos') {
-                if (valCheckIn === 'confirmado') {
-                    passCheckIn = estadoCheckIn.includes("ok") || estadoCheckIn.includes("confirmada");
-                } else if (valCheckIn === 'sin_confirmar') {
-                    passCheckIn = (estadoCheckIn === "");
-                }
-            }
-
-            // C. Filtro de Nombres
-            if (valEsposo && row[COL_ESPOSO] !== valEsposo) passNombres = false;
-            if (valEsposa && row[COL_ESPOSA] !== valEsposa) passNombres = false;
-
-            return passPago && passCheckIn && passNombres;
-        });
-
-        // Actualizar contador
-        document.getElementById('recordCount').innerText = `Registros encontrados: ${filteredData.length}`;
-        
-        // Dibujar tabla
-        renderTable();
+        applyFilters();
     }
 
-    // 5. DIBUJAR TABLA
-    function renderTable() {
-        const thead = document.getElementById('tableHead');
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = ''; 
-        thead.innerHTML = '';
+    function applyFilters() {
+        const fPago = document.getElementById('filterPago').value; const fCheck = document.getElementById('filterCheckIn').value;
+        const fEsposo = document.getElementById('filterEsposo').value; const fEsposa = document.getElementById('filterEsposa').value;
 
-        // Encabezados (Mostrar solo columnas relevantes para admin)
-        // Mostramos las primeras 4 (Timestamp, Nombres, Tel) + Pago + CheckIn
-        const colsToShow = [0, 1, 2, 3, COL_PAGO, COL_CHECKIN];
-        
-        colsToShow.forEach(idx => {
-            let title = headers[idx] || `Col ${idx}`;
-            if(idx === COL_PAGO) title = "Estatus Pago";
-            if(idx === COL_CHECKIN) title = "Check-In";
-            thead.insertAdjacentHTML('beforeend', `<th>${title}</th>`);
+        filteredData = allData.filter(r => {
+            const pagoVal = (r[COL_PAGO] || "").toString().toLowerCase();
+            let passPago = true;
+            if (fPago === 'pendientes') passPago = (pagoVal === "");
+            if (fPago === 'pagados') passPago = pagoVal.includes("pagado");
+
+            const checkVal = (r[COL_CHECKIN] || "").toString().toLowerCase();
+            let passCheck = true;
+            if (fCheck === 'confirmado') passCheck = (checkVal === "ok");
+            if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
+
+            let passName = true;
+            if (fEsposo && r[COL_ESPOSO] !== fEsposo) passName = false;
+            if (fEsposa && r[COL_ESPOSA] !== fEsposa) passName = false;
+            return passPago && passCheck && passName;
         });
+        document.getElementById('countDisplay').innerText = `Registros: ${filteredData.length}`; renderTable();
+    }
 
-        // Filas
+    function renderTable() {
+        const tbody = document.getElementById('tableBody'); const thead = document.getElementById('tableHead');
+        tbody.innerHTML = ''; thead.innerHTML = '';
+        const showCols = [0, 1, 2, 3, COL_PAGO, COL_CHECKIN];
+        showCols.forEach(i => {
+            let label = headers[i];
+            if(i === COL_PAGO) label = "Estatus Pago"; if(i === COL_CHECKIN) label = "Check-in";
+            thead.insertAdjacentHTML('beforeend', `<th>${label}</th>`);
+        });
+        thead.insertAdjacentHTML('beforeend', `<th>Acción</th>`);
+
         filteredData.forEach(row => {
             let tr = document.createElement('tr');
-            
-            colsToShow.forEach(idx => {
-                let cellData = row[idx];
-                let content = cellData;
-
-                // Formato visual para Pago
-                if (idx === COL_PAGO) {
-                    let text = (cellData || "").toString().toLowerCase();
-                    if (text.includes("pagado")) {
-                        content = `<span class="tag tag-pagado">Pagado</span>`;
-                    } else {
-                        content = `<span class="tag tag-pendiente">Pendiente</span>`;
-                    }
-                }
-
-                // Formato visual para Check-in
-                if (idx === COL_CHECKIN) {
-                    let text = (cellData || "").toString().toLowerCase();
-                    if (text.includes("ok") || text.includes("confirmada")) {
-                        content = `<span class="tag tag-checkin">OK</span>`;
-                    } else {
-                        content = `<span style="color:#999; font-style:italic;">--</span>`;
-                    }
-                }
-
-                tr.insertAdjacentHTML('beforeend', `<td>${content}</td>`);
+            showCols.forEach(i => {
+                let val = row[i];
+                if(i === COL_PAGO) val = (val && val.toString().toLowerCase().includes("pagado")) ? `<span class="tag tag-ok">Pagado</span>` : `<span class="tag tag-pending">Pendiente</span>`;
+                if(i === COL_CHECKIN) val = (val && val.toString() === "OK") ? `<span class="tag tag-ok">OK</span>` : `<span class="tag tag-empty">-</span>`;
+                tr.insertAdjacentHTML('beforeend', `<td>${val}</td>`);
             });
-            
-            tbody.appendChild(tr);
+            let tdBtn = document.createElement('td');
+            const isPaid = (row[COL_PAGO] || "").toString().toLowerCase().includes("pagado");
+            let btn = document.createElement('button'); btn.className = 'btn-action';
+            if(isPaid) {
+                btn.innerText = "📲 Reenviar"; btn.onclick = () => sendWhatsApp(row);
+            } else {
+                btn.innerText = "✅ Validar"; btn.onclick = () => validatePay(btn, row, tdBtn);
+            }
+            tdBtn.appendChild(btn); tr.appendChild(tdBtn); tbody.appendChild(tr);
         });
-
-        if (filteredData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No se encontraron registros con estos filtros.</td></tr>';
-        }
     }
 
-    // Iniciar
-    loadDatabase();
+    function validatePay(btn, row, container) {
+        btn.disabled = true; btn.innerText = "⏳ ...";
+        const params = new URLSearchParams(); params.append('accion', 'pagar'); params.append('esposo', row[COL_ESPOSO]); params.append('esposa', row[COL_ESPOSA]);
+        fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: params })
+        .then(() => {
+            setTimeout(() => {
+                row[COL_PAGO] = "Pagado";
+                row[COL_LINK] = `https://dmendocci.github.io/cena-parejas/pase.html?esposo=${encodeURIComponent(row[COL_ESPOSO])}&esposa=${encodeURIComponent(row[COL_ESPOSA])}`;
+                sendWhatsApp(row); applyFilters();
+            }, 1000);
+        });
+    }
 
+    function sendWhatsApp(row) {
+        let tel = (row[COL_TEL] || "").toString().replace(/\D/g, '');
+        const link = `https://dmendocci.github.io/cena-parejas/pase.html?esposo=${encodeURIComponent(row[COL_ESPOSO])}&esposa=${encodeURIComponent(row[COL_ESPOSA])}`;
+        const msg = `¡Hola! Su registro a "Love Night" está confirmado.\n\nSu pase de acceso:\n${link}\n\n¡Los esperamos!`;
+        let url = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+        if(tel.length > 5) url += `&phone=${tel}`;
+        window.open(url, '_blank');
+    }
+    loadDB();
 </script>
-
 </body>
 </html>
