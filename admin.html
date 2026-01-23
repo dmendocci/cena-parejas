@@ -92,7 +92,7 @@
         </div>
     </div>
 </div>
-<div id="version">v10.0 - ForceReset</div>
+<div id="version">v11.0 - BiDirectional</div>
 
 <script>
     // --- TU URL DEL SCRIPT (TU CLON) ---
@@ -182,50 +182,50 @@
         list1.forEach(x => s1.add(new Option(x, x))); 
         list2.forEach(x => s2.add(new Option(x, x)));
         
-        // Restauramos selección si es posible, si no, se queda en Todos
+        // Restauramos selección si es posible
         if(val1) s1.value = val1;
         if(val2) s2.value = val2;
     }
 
-    // --- FUNCIÓN DE SINCRONIZACIÓN Y RESETEO ---
+    // --- FUNCIÓN DE SINCRONIZACIÓN Y RESETEO AGRESIVO ---
     function syncCouple(source) {
         const selEsposo = document.getElementById('filterEsposo');
         const selEsposa = document.getElementById('filterEsposa');
         
+        // Obtenemos los valores NUEVOS recién seleccionados
         const v1 = selEsposo.value;
         const v2 = selEsposa.value;
         
         if (source === 'esposo') {
             if (v1 === "") {
-                // RESETEO FORZADO: Si Esposo es "Todos", Esposa es "Todas" (Indice 0)
-                selEsposa.selectedIndex = 0;
+                // Si seleccionaste "Todos" en Esposo, BORRAMOS Esposa
+                selEsposa.value = "";
             } else {
-                // Si seleccionó nombre, buscar pareja
+                // Si seleccionaste un nombre, buscamos su pareja
                 const match = allData.find(r => r[COL_ESPOSO] === v1); 
                 if(match) selEsposa.value = match[COL_ESPOSA];
             }
         } 
-        
-        if (source === 'esposa') {
+        else if (source === 'esposa') {
             if (v2 === "") {
-                // RESETEO FORZADO: Si Esposa es "Todas", Esposo es "Todos" (Indice 0)
-                selEsposo.selectedIndex = 0;
+                // Si seleccionaste "Todas" en Esposa, BORRAMOS Esposo
+                selEsposo.value = "";
             } else {
-                // Si seleccionó nombre, buscar pareja
+                // Si seleccionaste un nombre, buscamos su pareja
                 const match = allData.find(r => r[COL_ESPOSA] === v2); 
                 if(match) selEsposo.value = match[COL_ESPOSO];
             }
         }
         
+        // Aplicamos el filtro con los nuevos valores
         applyFilters();
     }
 
     function setDropdownValue(id, value) {
         const dd = document.getElementById(id);
-        // Intentar poner valor
         dd.value = value;
-        // Si falló (ej. el nombre cambió), poner en Todos
-        if (dd.value !== value) dd.selectedIndex = 0;
+        // Si falló (ej. el nombre cambió en la BD), resetear a Todos
+        if (dd.value !== value) dd.value = "";
     }
 
     function applyFilters() {
@@ -246,9 +246,9 @@
             if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
 
             let passName = true;
-            // Comparación (ahora segura con trim)
-            if (fEsposo && r[COL_ESPOSO] !== fEsposo) passName = false;
-            if (fEsposa && r[COL_ESPOSA] !== fEsposa) passName = false;
+            // Solo filtramos por nombre si NO es vacío
+            if (fEsposo !== "" && r[COL_ESPOSO] !== fEsposo) passName = false;
+            if (fEsposa !== "" && r[COL_ESPOSA] !== fEsposa) passName = false;
             
             return passPago && passCheck && passName;
         });
