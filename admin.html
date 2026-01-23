@@ -92,10 +92,10 @@
         </div>
     </div>
 </div>
-<div id="version">v9.0 - DropdownReset</div>
+<div id="version">v10.0 - ForceReset</div>
 
 <script>
-    // --- TU URL DEL SCRIPT (VERIFICA QUE SEA LA DE TU CLON) ---
+    // --- TU URL DEL SCRIPT (TU CLON) ---
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
     
     // IDs Oficiales
@@ -103,7 +103,7 @@
     const SHEET_GID = '1064363108';
 
     // =========================================================
-    // 🛠️ MAPEO FIJO (BASADO EN TU IMAGEN)
+    // 🛠️ MAPEO FIJO DE COLUMNAS
     // =========================================================
     const COL_ESPOSO    = 1; // B
     const COL_TEL_ESP   = 2; // C
@@ -126,28 +126,34 @@
     let isFirstLoad = true;
 
     function loadDB(isAutoUpdate = false) {
-        // Agregamos un número aleatorio extra para ROMPER EL CACHÉ de Google
+        // Anti-caché fuerte
         const t = new Date().getTime();
-        const rand = Math.floor(Math.random() * 10000);
+        const rand = Math.floor(Math.random() * 99999);
         const s = document.createElement('script');
-        s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}&rand=${rand}`;
+        s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}&r=${rand}`;
         document.body.appendChild(s);
     }
 
-    // Auto-actualizar cada 5s
+    // Actualizar cada 5s
     setInterval(() => loadDB(true), 5000);
 
     window.processData = function(json) {
-        allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? c.v : ""));
+        // Limpiamos datos (trim) para evitar errores de espacios
+        allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? String(c.v).trim() : ""));
         
+        // 1. Guardar qué tenemos seleccionado ahora
         const currentEsposo = document.getElementById('filterEsposo').value;
         const currentEsposa = document.getElementById('filterEsposa').value;
 
+        // 2. Reconstruir las listas
         initDropdowns(); 
         
-        if(currentEsposo) document.getElementById('filterEsposo').value = currentEsposo;
-        if(currentEsposa) document.getElementById('filterEsposa').value = currentEsposa;
+        // 3. Intentar restaurar la selección si aún es válida
+        // (Si el usuario estaba viendo a "Juan", que siga viendo a "Juan" tras el refresco)
+        if(currentEsposo) setDropdownValue('filterEsposo', currentEsposo);
+        if(currentEsposa) setDropdownValue('filterEsposa', currentEsposa);
 
+        // 4. Aplicar filtros
         applyFilters();
         
         if(isFirstLoad) {
@@ -161,44 +167,65 @@
         const s1 = document.getElementById('filterEsposo'); 
         const s2 = document.getElementById('filterEsposa');
         
-        if(s1.value === "" && s2.value === "") {
-             const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
-             const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
-             
-             s1.innerHTML = '<option value="">-- Todos --</option>';
-             s2.innerHTML = '<option value="">-- Todas --</option>';
-             list1.forEach(x => s1.add(new Option(x, x))); 
-             list2.forEach(x => s2.add(new Option(x, x)));
-        }
+        // Guardamos selección actual
+        const val1 = s1.value;
+        const val2 = s2.value;
+
+        // Obtenemos listas únicas
+        const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
+        const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
+        
+        // Reconstruimos SIEMPRE para asegurar que "Todos" existe
+        s1.innerHTML = '<option value="">-- Todos --</option>';
+        s2.innerHTML = '<option value="">-- Todas --</option>';
+
+        list1.forEach(x => s1.add(new Option(x, x))); 
+        list2.forEach(x => s2.add(new Option(x, x)));
+        
+        // Restauramos selección si es posible, si no, se queda en Todos
+        if(val1) s1.value = val1;
+        if(val2) s2.value = val2;
     }
 
-    // --- FUNCIÓN CORREGIDA PARA LIMPIAR AL VOLVER A "TODOS" ---
+    // --- FUNCIÓN DE SINCRONIZACIÓN Y RESETEO ---
     function syncCouple(source) {
         const selEsposo = document.getElementById('filterEsposo');
         const selEsposa = document.getElementById('filterEsposa');
+        
         const v1 = selEsposo.value;
         const v2 = selEsposa.value;
         
         if (source === 'esposo') {
             if (v1 === "") {
-                // Si seleccionó "Todos" en Esposo, limpiar Esposa
-                selEsposa.value = "";
+                // RESETEO FORZADO: Si Esposo es "Todos", Esposa es "Todas" (Indice 0)
+                selEsposa.selectedIndex = 0;
             } else {
-                // Si seleccionó un nombre, buscar pareja
+                // Si seleccionó nombre, buscar pareja
                 const match = allData.find(r => r[COL_ESPOSO] === v1); 
                 if(match) selEsposa.value = match[COL_ESPOSA];
             }
-        } else if (source === 'esposa') {
+        } 
+        
+        if (source === 'esposa') {
             if (v2 === "") {
-                // Si seleccionó "Todas" en Esposa, limpiar Esposo
-                selEsposo.value = "";
+                // RESETEO FORZADO: Si Esposa es "Todas", Esposo es "Todos" (Indice 0)
+                selEsposo.selectedIndex = 0;
             } else {
-                // Si seleccionó un nombre, buscar pareja
+                // Si seleccionó nombre, buscar pareja
                 const match = allData.find(r => r[COL_ESPOSA] === v2); 
                 if(match) selEsposo.value = match[COL_ESPOSO];
             }
         }
+        
         applyFilters();
+    }
+
+    function setDropdownValue(id, value) {
+        const dd = document.getElementById(id);
+        // Intentar poner valor
+        dd.value = value;
+        // Si falló (ej. el nombre cambió), poner en Todos
+        if (dd.value !== value) dd.selectedIndex = 0;
     }
 
     function applyFilters() {
@@ -219,8 +246,9 @@
             if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
 
             let passName = true;
-            if (fEsposo && r[COL_ESPOSO] != fEsposo) passName = false;
-            if (fEsposa && r[COL_ESPOSA] != fEsposa) passName = false;
+            // Comparación (ahora segura con trim)
+            if (fEsposo && r[COL_ESPOSO] !== fEsposo) passName = false;
+            if (fEsposa && r[COL_ESPOSA] !== fEsposa) passName = false;
             
             return passPago && passCheck && passName;
         });
