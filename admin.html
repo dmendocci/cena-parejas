@@ -4,350 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>Admin - Amor que permanece</title>
+    <title>Admin - Love Night</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #fdfbf7; color: #333; padding: 20px; transition: background 0.5s; }
-        .container { max-width: 1300px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-top: 5px solid #d4af37; }
-        
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        h1 { color: #d4af37; margin: 0; font-weight: 300; letter-spacing: 1px; font-size: 1.5rem; text-transform: uppercase; }
-        .live-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; display: flex; align-items: center; gap: 5px; background: #e8f8f5; padding: 5px 12px; border-radius: 20px; border: 1px solid #a9dfbf; }
-        .blink { animation: blinker 1.5s linear infinite; width: 8px; height: 8px; background: #27ae60; border-radius: 50%; display: inline-block; }
-        @keyframes blinker { 50% { opacity: 0; } }
+        /* --- TEMA LOVE NIGHT --- */
+        :root {
+            --vino: #741b47;
+            --dorado: #d4af37;
+            --crema: #fcf9f2;
+            --texto: #4a2c38;
+            --verde: #27ae60;
+        }
 
-        .filters-box { background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--crema); color: var(--texto); padding: 20px; }
+        .container { max-width: 1300px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(116, 27, 71, 0.1); border-top: 6px solid var(--dorado); }
+        
+        h1 { color: var(--vino); text-align: center; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 30px; }
+        
+        /* Filtros */
+        .filters-box { background: #fff; padding: 20px; border: 1px solid #eaddd5; border-radius: 8px; margin-bottom: 20px; }
         .row { display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
         .col { flex: 1; min-width: 250px; }
-        label { font-weight: bold; font-size: 0.9rem; color: #555; display: block; margin-bottom: 5px; }
-        select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; }
+        label { color: var(--vino); font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 5px; }
+        select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
+        select:focus { border-color: var(--vino); }
         
-        .filters-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
-        .count-tag { font-size: 0.9rem; color: #777; font-weight: bold; }
+        /* Botones */
+        .btn-reset { background: #eee; color: #555; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-reset:hover { background: #ddd; color: #000; }
+
+        .btn-action { background: var(--dorado); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
+        .btn-action:hover { background: #b59020; }
         
-        .table-wrap { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 1000px; margin-top: 10px; }
-        th { background: #2c3e50; color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
-        td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 0.9rem; }
-        tr:hover { background: #f9f9f9; }
+        /* Estado VALIDADO (Verde) */
+        .btn-validated { background: var(--vino) !important; color: white !important; cursor: default !important; opacity: 0.8; }
         
-        .tag { padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
+        /* Tabla */
+        .table-wrap { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        th { background: var(--vino); color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #faf5f7; }
+        
+        .tag { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
         .tag-ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .tag-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        
-        .btn-action { background: #25D366; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 0.9rem; transition: background 0.3s; }
-        .btn-action:hover { background: #1ebc57; }
-        .btn-action:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Estilos del Botón Reset */
-        .btn-reset { 
-            background: #6c757d; color: white; border: none; padding: 8px 16px; 
-            border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; 
-            display: flex; align-items: center; gap: 8px; transition: background 0.3s;
-        }
-        .btn-reset:hover { background: #5a6268; }
-
-        #loading { text-align: center; padding: 50px; color: #888; font-size: 1.2rem; }
+        #loading { text-align: center; padding: 40px; color: #999; font-size: 1.2rem; }
         #version { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #ccc; }
     </style>
 </head>
 <body>
+
 <div class="container">
-    <div class="header-flex">
-        <h1>Love Night - Registro</h1>
-        <div class="live-indicator"><span class="blink"></span> EN VIVO</div>
-    </div>
-
-    <div id="loading">⏳ Conectando base de datos...</div>
-
+    <h1>Love Night - Registro</h1>
+    <div id="loading">⏳ Cargando invitados...</div>
+    
     <div id="mainContent" style="display:none;">
         <div class="filters-box">
             <div class="row">
-                <div class="col">
-                    <label>💰 Estatus de Pago:</label>
-                    <select id="filterPago" onchange="applyFilters()">
-                        <option value="todos">Todos</option>
-                        <option value="pendientes">Pendientes (Sin pago)</option>
-                        <option value="pagados">Pagados</option>
-                    </select>
-                </div>
-                <div class="col">
-                    <label>✅ Check-in Confirmado:</label>
-                    <select id="filterCheckIn" onchange="applyFilters()">
-                        <option value="default" selected>Seleccione una opción</option>
-                        <option value="confirmado">Confirmado (OK)</option>
-                        <option value="sin_confirmar">Sin confirmar</option>
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
+                <div class="col"><label>💰 Pago</label><select id="fPago" onchange="apply()"><option value="all">Todos</option><option value="no">Pendientes</option><option value="yes">Pagados</option></select></div>
+                <div class="col"><label>✅ Check-in</label><select id="fCheck" onchange="apply()"><option value="def">Seleccione...</option><option value="ok">Confirmado</option><option value="no">Sin confirmar</option><option value="all">Todos</option></select></div>
             </div>
             <div class="row">
-                <div class="col">
-                    <label>🤵 Nombre del Esposo:</label>
-                    <select id="filterEsposo" onchange="syncCouple('esposo')"><option value="">-- Todos --</option></select>
-                </div>
-                <div class="col">
-                    <label>👰 Nombre de la Esposa:</label>
-                    <select id="filterEsposa" onchange="syncCouple('esposa')"><option value="">-- Todas --</option></select>
-                </div>
+                <div class="col"><label>🤵 Esposo</label><select id="fEsposo" onchange="sync('man')"><option value="">-- Todos --</option></select></div>
+                <div class="col"><label>👰 Esposa</label><select id="fEsposa" onchange="sync('woman')"><option value="">-- Todas --</option></select></div>
             </div>
-            
-            <div class="filters-footer">
-                <button class="btn-reset" onclick="resetAllFilters()">🔄 Restablecer Filtros</button>
-                <div class="count-tag" id="countDisplay">Registros: 0</div>
+            <div style="margin-top:10px; text-align:right;">
+                <button class="btn-reset" onclick="resetFilters()" style="float:left;">🔄 Limpiar Filtros</button>
+                <span id="count" style="font-weight:bold; color:#777;">0 reg.</span>
             </div>
         </div>
-
-        <div class="table-wrap">
-            <table id="dataTable">
-                <thead><tr id="tableHead"></tr></thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
+        <div class="table-wrap"><table id="tab"><thead><tr id="th"></tr></thead><tbody id="tb"></tbody></table></div>
     </div>
 </div>
-<div id="version">v12.0 - ResetBtn</div>
+<div id="version">v17.0 - Producción</div>
 
 <script>
-    // --- URL SCRIPT ---
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
-    
-    // IDs Oficiales
-    const SHEET_ID = '1slBfBNMEVgWOewNphlFi82fQbs7Y6GtD6Hcplj2D8do';
-    const SHEET_GID = '1064363108';
-
-    // MAPEO DE COLUMNAS
-    const COL_ESPOSO    = 1; // B
-    const COL_TEL_ESP   = 2; // C
-    const COL_ESPOSA    = 3; // D
-    const COL_TEL_ESPA  = 4; // E
-    const COL_PAGO      = 7; // H
-    const COL_CHECKIN   = 8; // I
-
-    const HEADERS_MAP = {
-        [COL_ESPOSO]: "Nombre Esposo",
-        [COL_ESPOSA]: "Nombre Esposa",
-        [COL_TEL_ESP]: "Tel. Esposo",
-        [COL_TEL_ESPA]: "Tel. Esposa",
-        [COL_PAGO]: "Estado Pago",
-        [COL_CHECKIN]: "Check-in"
-    };
-
-    let allData = []; 
-    let filteredData = [];
-    let isFirstLoad = true;
-
-    function loadDB(isAutoUpdate = false) {
-        const t = new Date().getTime();
-        const rand = Math.floor(Math.random() * 99999);
-        const s = document.createElement('script');
-        s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:processData&gid=${SHEET_GID}&t=${t}&r=${rand}`;
-        document.body.appendChild(s);
-    }
-
-    // Auto-update
-    setInterval(() => loadDB(true), 5000);
-
-    window.processData = function(json) {
-        allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? String(c.v).trim() : ""));
-        
-        const currentEsposo = document.getElementById('filterEsposo').value;
-        const currentEsposa = document.getElementById('filterEsposa').value;
-
-        initDropdowns(); 
-        
-        if(currentEsposo) setDropdownValue('filterEsposo', currentEsposo);
-        if(currentEsposa) setDropdownValue('filterEsposa', currentEsposa);
-
-        applyFilters();
-        
-        if(isFirstLoad) {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            isFirstLoad = false;
-        }
-    };
-
-    function initDropdowns() {
-        const s1 = document.getElementById('filterEsposo'); 
-        const s2 = document.getElementById('filterEsposa');
-        const val1 = s1.value;
-        const val2 = s2.value;
-
-        const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
-        const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
-        
-        s1.innerHTML = '<option value="">-- Todos --</option>';
-        s2.innerHTML = '<option value="">-- Todas --</option>';
-
-        list1.forEach(x => s1.add(new Option(x, x))); 
-        list2.forEach(x => s2.add(new Option(x, x)));
-        
-        if(val1) s1.value = val1;
-        if(val2) s2.value = val2;
-    }
-
-    function syncCouple(source) {
-        const selEsposo = document.getElementById('filterEsposo');
-        const selEsposa = document.getElementById('filterEsposa');
-        const v1 = selEsposo.value;
-        const v2 = selEsposa.value;
-        
-        if (source === 'esposo') {
-            if (v1 === "") {
-                selEsposa.selectedIndex = 0;
-            } else {
-                const match = allData.find(r => r[COL_ESPOSO] === v1); 
-                if(match) selEsposa.value = match[COL_ESPOSA];
-            }
-        } 
-        
-        if (source === 'esposa') {
-            if (v2 === "") {
-                selEsposo.selectedIndex = 0;
-            } else {
-                const match = allData.find(r => r[COL_ESPOSA] === v2); 
-                if(match) selEsposo.value = match[COL_ESPOSO];
-            }
-        }
-        
-        applyFilters();
-    }
-
-    // --- NUEVA FUNCIÓN: RESETEAR TODO ---
-    function resetAllFilters() {
-        document.getElementById('filterPago').value = "todos";
-        document.getElementById('filterCheckIn').value = "default";
-        document.getElementById('filterEsposo').selectedIndex = 0;
-        document.getElementById('filterEsposa').selectedIndex = 0;
-        applyFilters();
-    }
-
-    function setDropdownValue(id, value) {
-        const dd = document.getElementById(id);
-        dd.value = value;
-        if (dd.value !== value) dd.value = "";
-    }
-
-    function applyFilters() {
-        const fPago = document.getElementById('filterPago').value; 
-        const fCheck = document.getElementById('filterCheckIn').value;
-        const fEsposo = document.getElementById('filterEsposo').value; 
-        const fEsposa = document.getElementById('filterEsposa').value;
-
-        filteredData = allData.filter(r => {
-            const pagoVal = (r[COL_PAGO] || "").toString().toLowerCase();
-            let passPago = true;
-            if (fPago === 'pendientes') passPago = (pagoVal === "");
-            if (fPago === 'pagados') passPago = pagoVal.includes("pagado");
-
-            const checkVal = (r[COL_CHECKIN] || "").toString().toLowerCase();
-            let passCheck = true;
-            if (fCheck === 'confirmado') passCheck = (checkVal === "ok");
-            if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
-
-            let passName = true;
-            if (fEsposo !== "" && r[COL_ESPOSO] !== fEsposo) passName = false;
-            if (fEsposa !== "" && r[COL_ESPOSA] !== fEsposa) passName = false;
-            
-            return passPago && passCheck && passName;
-        });
-        document.getElementById('countDisplay').innerText = `Registros: ${filteredData.length}`; 
-        renderTable();
-    }
-
-    function renderTable() {
-        const tbody = document.getElementById('tableBody'); 
-        const thead = document.getElementById('tableHead');
-        tbody.innerHTML = ''; thead.innerHTML = '';
-        
-        const colsToShow = [COL_ESPOSO, COL_ESPOSA, COL_TEL_ESP, COL_TEL_ESPA, COL_PAGO, COL_CHECKIN];
-        
-        colsToShow.forEach(colIndex => {
-            thead.insertAdjacentHTML('beforeend', `<th>${HEADERS_MAP[colIndex]}</th>`);
-        });
-        thead.insertAdjacentHTML('beforeend', `<th>Acción</th>`);
-
-        filteredData.forEach(row => {
-            let tr = document.createElement('tr');
-            colsToShow.forEach(i => {
-                let val = row[i];
-                if(i === COL_PAGO) {
-                    val = (val && val.toString().toLowerCase().includes("pagado")) 
-                        ? `<span class="tag tag-ok">Pagado</span>` 
-                        : `<span class="tag tag-pending">Pendiente</span>`;
-                } else if(i === COL_CHECKIN) {
-                    val = (val && val.toString() === "OK") 
-                        ? `<span class="tag tag-ok">OK</span>` 
-                        : `<span class="tag tag-empty">-</span>`;
-                } else {
-                     if (val === undefined || val === null) val = "";
-                }
-                tr.insertAdjacentHTML('beforeend', `<td>${val}</td>`);
-            });
-            
-            let tdBtn = document.createElement('td');
-            const isPaid = (row[COL_PAGO] || "").toString().toLowerCase().includes("pagado");
-            let btn = document.createElement('button');
-            btn.className = 'btn-action';
-            
-            if(isPaid) {
-                btn.innerText = "📲 Reenviar a Ambos";
-                btn.onclick = () => sendSequence(row);
-            } else {
-                btn.innerText = "✅ Validar y Enviar"; 
-                btn.onclick = () => validatePay(btn, row);
-            }
-            tdBtn.appendChild(btn);
-            tr.appendChild(tdBtn); 
-            tbody.appendChild(tr);
-        });
-    }
-
-    function validatePay(btn, row) {
-        btn.disabled = true; btn.innerText = "⏳ ...";
-        const params = new URLSearchParams(); 
-        params.append('accion', 'pagar'); 
-        params.append('esposo', row[COL_ESPOSO]); 
-        params.append('esposa', row[COL_ESPOSA]);
-        
-        fetch(APPS_SCRIPT_URL, { 
-            method: 'POST', mode: 'no-cors', 
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
-            body: params 
-        }).then(() => {
-            setTimeout(() => {
-                row[COL_PAGO] = "Pagado";
-                sendSequence(row); 
-                loadDB(true); 
-            }, 1000);
-        });
-    }
-
-    function sendSequence(row) {
-        const link = `https://dmendocci.github.io/cena-parejas/pase.html?esposo=${encodeURIComponent(row[COL_ESPOSO])}&esposa=${encodeURIComponent(row[COL_ESPOSA])}`;
-        const msg = `¡Hola! Su registro a "Amor que Permanece" está confirmado.\n\nSu pase de acceso:\n${link}\n\n¡Los esperamos!`;
-        
-        let tel1 = (row[COL_TEL_ESP] || "").toString().replace(/\D/g, '');
-        let tel2 = (row[COL_TEL_ESPA] || "").toString().replace(/\D/g, '');
-
-        if(tel1.length > 5) {
-            let url1 = `https://web.whatsapp.com/send?phone=${tel1}&text=${encodeURIComponent(msg)}`;
-            window.open(url1, '_blank');
-        } else {
-            alert("⚠️ El Esposo no tiene número registrado.");
-        }
-
-        if(tel2.length > 5) {
-            setTimeout(() => {
-                let url2 = `https://web.whatsapp.com/send?phone=${tel2}&text=${encodeURIComponent(msg)}`;
-                window.open(url2, '_blank');
-            }, 2500);
-        }
-    }
-    
-    loadDB();
-</script>
-</body>
-</html>
+    // ==========================================
+    // 🚀 ZONA DE CONEXIÓN REAL
+    // ==========================================
+    const API_URL = "https
