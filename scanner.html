@@ -2,161 +2,145 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Scanner V5 - Love Night</title>
+    <title>Scanner V6 Compact</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; padding: 10px; text-align: center; color: white; }
-        .card { background: white; max-width: 600px; margin: 0 auto; padding: 15px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background: #222; padding: 10px; text-align: center; color: white; margin: 0; }
         
-        h2 { color: #741b47; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
-        .version { font-size: 0.8rem; color: #bbb; margin-bottom: 15px; }
+        /* TARJETA COMPACTA */
+        .card { background: white; max-width: 400px; margin: 0 auto; padding: 10px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); color: #333; position: relative; }
         
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; margin-bottom: 20px; border: 4px solid #ddd; }
+        h2 { color: #741b47; margin: 0 0 5px 0; font-size: 1.2rem; text-transform: uppercase; }
+        .version { font-size: 0.7rem; color: #999; margin-bottom: 5px; }
         
-        /* --- ESTILOS DE LOS MENSAJES (GIGANTES) --- */
-        .status-box { padding: 25px; margin-top: 15px; border-radius: 12px; display: none; animation: popIn 0.3s ease; }
+        /* CÁMARA PEQUEÑA Y CUADRADA */
+        #reader { 
+            width: 250px; 
+            height: 250px; 
+            margin: 0 auto 10px auto; 
+            border: 3px solid #333; 
+            border-radius: 8px; 
+            background: black;
+            overflow: hidden;
+        }
         
-        /* TEXTO GRANDE */
-        .titulo-msg { font-size: 2rem; font-weight: 900; display: block; margin-bottom: 10px; text-transform: uppercase; line-height: 1; }
-        .pareja-msg { font-size: 1.6rem; font-weight: bold; margin-bottom: 15px; color: #333; display: block; }
-        .detalle-msg { font-size: 1.1rem; line-height: 1.4; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 8px; }
+        /* MENSAJES (Ocupan el espacio justo) */
+        .status-box { padding: 10px; margin-top: 5px; border-radius: 8px; display: none; }
         
-        /* ESTADO: ÉXITO (VERDE) */
-        .success { background: #2ecc71; color: #fff; border: 4px solid #27ae60; }
-        .success .pareja-msg { color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .titulo-msg { font-size: 1.4rem; font-weight: 900; display: block; margin-bottom: 2px; text-transform: uppercase; }
+        .pareja-msg { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #333; display: block; }
+        .detalle-msg { font-size: 0.9rem; line-height: 1.3; background: rgba(255,255,255,0.7); padding: 5px; border-radius: 5px; }
+        
+        /* COLORES DE ESTADO */
+        .success { background: #2ecc71; color: #fff; border: 2px solid #27ae60; }
+        .success .pareja-msg { color: #fff; }
         .success .detalle-msg { color: #004d26; }
 
-        /* ESTADO: DUPLICADO (AMARILLO) */
-        .duplicate { background: #f1c40f; color: #7f6000; border: 4px solid #f39c12; }
-        .duplicate .titulo-msg { color: #c0392b; } /* Rojo para "YA INGRESARON" */
+        .duplicate { background: #f1c40f; color: #7f6000; border: 2px solid #f39c12; }
+        .duplicate .titulo-msg { color: #c0392b; }
         .duplicate .pareja-msg { color: #5a4200; }
-        .duplicate .detalle-msg { color: #5a4200; border: 1px solid rgba(0,0,0,0.1); }
-
-        /* ESTADO: ERROR (ROJO) */
-        .error { background: #e74c3c; color: white; font-weight: bold; font-size: 1.2rem; }
-
-        .processing { background: #3498db; color: white; font-size: 1.5rem; font-weight: bold; }
-
-        button { padding: 15px; width: 100%; background: #34495e; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 20px; display: none; }
         
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .error { background: #e74c3c; color: white; font-weight: bold; }
+        .processing { background: #3498db; color: white; font-weight: bold; }
+
+        /* BOTÓN REINICIO */
+        button { padding: 10px; width: 100%; background: #34495e; color: white; border: none; border-radius: 5px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📸 Love Night Scanner</h2>
-    <div class="version">V5.0 - Pantalla Gigante</div>
+    <h2>📸 Check-in</h2>
+    <div class="version">V6.0 Compact</div>
     
     <div id="reader"></div>
 
     <div id="mensaje" class="status-box"></div>
     
-    <button id="btnReset" onclick="reiniciar()">🔄 SIGUIENTE PAREJA</button>
+    <button id="btnReset" onclick="reiniciar()">🔄 SIGUIENTE</button>
 </div>
 
 <script>
-    // --- TU URL DEL SCRIPT ---
+    // --- TU URL DE APPS SCRIPT ---
     const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
     
     let html5QrcodeScanner;
     let isProcessing = false;
 
-    function onScanSuccess(decodedText, decodedResult) {
+    function onScanSuccess(decodedText) {
         if (isProcessing) return; 
 
         let esposo = "", esposa = "";
         
-        // LOGICA DE LECTURA (TEXTO O URL)
+        // 1. EXTRAER DATOS
         if (decodedText.toUpperCase().includes("BODA:")) {
             try {
-                const regex = /BODA:\s*(.*?)\s*&\s*(.*?)\s*ESTADO:/i;
-                const match = decodedText.match(regex);
-                if (match && match.length >= 3) {
-                    esposo = match[1].trim(); esposa = match[2].trim();
-                }
+                const match = decodedText.match(/BODA:\s*(.*?)\s*&\s*(.*?)\s*ESTADO:/i);
+                if (match && match.length >= 3) { esposo = match[1].trim(); esposa = match[2].trim(); }
             } catch (e) {}
-        } else if (decodedText.includes("esposo=") && decodedText.includes("esposa=")) {
+        } else if (decodedText.includes("esposo=")) {
             try {
-                let params = decodedText.includes('?') ? new URLSearchParams(decodedText.split('?')[1]) : new URLSearchParams(decodedText);
-                esposo = params.get('esposo'); esposa = params.get('esposa');
+                let p = decodedText.includes('?') ? new URLSearchParams(decodedText.split('?')[1]) : new URLSearchParams(decodedText);
+                esposo = p.get('esposo'); esposa = p.get('esposa');
             } catch (e) {}
         }
 
         if (esposo && esposa) {
             stopCameraAndSend(esposo, esposa);
-        } else {
-            if(decodedText.includes("BODA") || decodedText.includes("esposo")) {
-                mostrar("⚠️ ERROR DE LECTURA<br>Acerca más el código", "error");
-                setTimeout(() => { document.getElementById('mensaje').style.display='none'; }, 2000);
-            }
+        } else if(decodedText.includes("BODA")) {
+            mostrar("⚠️ No se pudo leer bien", "error");
+            setTimeout(() => { document.getElementById('mensaje').style.display='none'; }, 1500);
         }
     }
 
     function stopCameraAndSend(esposo, esposa) {
         isProcessing = true;
         html5QrcodeScanner.pause(); 
+        mostrar("⏳ Validando...", "processing");
         
-        mostrar(`⏳ Validando...<br>${esposo} y ${esposa}`, "processing");
-        beep(600, 0.1); 
-
         const form = new URLSearchParams();
         form.append('accion', 'confirmar');
         form.append('esposo', esposo);
         form.append('esposa', esposa);
 
         fetch(API_URL, { method: 'POST', body: form })
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
             let info = data.message;
-            // Seguridad por si el backend falla en enviar objeto
-            let hora = (typeof info === 'object') ? info.hora : info;
-            let tels = (typeof info === 'object') ? info.telefonos : "Actualiza Backend (Nueva Versión)";
+            // Si el backend no se actualizó, info.hora será undefined
+            let hora = (info && info.hora) ? info.hora : (typeof info === 'string' ? info : "---");
+            let tels = (info && info.telefonos) ? info.telefonos : "⚠️ Actualiza Backend (Nueva Versión)";
 
             if (data.result === 'success') {
-                // --- CASO EXITO (VERDE) ---
                 mostrar(`
-                    <span class="titulo-msg">¡BIENVENIDOS!</span>
-                    <span class="pareja-msg">${esposo} y ${esposa}</span>
-                    <div class="detalle-msg">
-                        ✅ Entrada Registrada<br>
-                        🕒 Hora: ${hora}
-                    </div>
+                    <span class="titulo-msg">✅ ADELANTE</span>
+                    <span class="pareja-msg">${esposo} & ${esposa}</span>
+                    <div class="detalle-msg">Hora: ${hora}</div>
                 `, "success");
-                beep(1000, 0.3); 
-
+                beep(1000, 0.2); 
             } else if (data.result === 'duplicate') {
-                // --- CASO DUPLICADO (AMARILLO) ---
                 mostrar(`
-                    <span class="titulo-msg">⚠️ YA INGRESARON</span>
-                    <span class="pareja-msg">${esposo} y ${esposa}</span>
+                    <span class="titulo-msg">⛔ YA ENTRARON</span>
+                    <span class="pareja-msg">${esposo} & ${esposa}</span>
                     <div class="detalle-msg">
-                        🕒 Entraron a las: <b>${hora}</b><br>
-                        <hr style="border-color:#aaa; margin:10px 0;">
+                        Previamente: ${hora}<br>
                         📞 <b>Contacto:</b><br>${tels}
                     </div>
                 `, "duplicate");
-                beep(200, 0.6); 
-
+                beep(200, 0.5); 
             } else {
-                mostrar(`❌ ERROR SISTEMA:<br>${data.message}`, "error");
+                mostrar(`❌ Error: ${data.message}`, "error");
             }
         })
-        .catch(err => {
-            mostrar("❌ SIN INTERNET", "error");
-        })
-        .finally(() => {
-            document.getElementById('btnReset').style.display = 'block';
-        });
+        .catch(e => mostrar("❌ Error de Red", "error"))
+        .finally(() => document.getElementById('btnReset').style.display = 'block');
     }
 
     function mostrar(html, tipo) {
-        const div = document.getElementById('mensaje');
-        div.innerHTML = html;
-        div.className = "status-box " + tipo;
-        div.style.display = 'block';
+        const d = document.getElementById('mensaje');
+        d.innerHTML = html; d.className = "status-box " + tipo; d.style.display = 'block';
     }
 
     function reiniciar() {
@@ -169,14 +153,13 @@
     function beep(f, d) {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const o = ctx.createOscillator(); const g = ctx.createGain();
-            o.connect(g); g.connect(ctx.destination);
-            o.frequency.value = f; o.type = 'sine';
-            o.start(); g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + d); o.stop(d);
+            const o = ctx.createOscillator(); o.connect(ctx.destination);
+            o.frequency.value = f; o.start(); o.stop(ctx.currentTime + d);
         } catch(e) {}
     }
 
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    // Configuración para cámara pequeña (250px)
+    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
     html5QrcodeScanner.render(onScanSuccess);
 </script>
 
