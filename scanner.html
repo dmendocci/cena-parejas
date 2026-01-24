@@ -3,90 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Scanner - Love Night</title>
+    <title>Scanner Cámara - Love Night</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #fcf9f2; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px; border-top: 5px solid #d4af37; }
-        h2 { color: #741b47; margin-bottom: 20px; }
-        input { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; text-align: center; }
-        input:focus { border-color: #741b47; outline: none; }
-        button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:disabled { background: #ccc; }
+        body { font-family: 'Segoe UI', sans-serif; background: #fcf9f2; padding: 20px; text-align: center; }
+        .card { background: white; max-width: 500px; margin: 0 auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #d4af37; }
+        h2 { color: #741b47; margin: 0 0 15px 0; }
         
-        #mensaje { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; font-weight: bold; }
+        /* Estilos del lector de cámara */
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 20px; }
+        
+        /* Mensajes */
+        #resultado { margin-top: 20px; font-weight: bold; padding: 15px; border-radius: 8px; display: none; }
         .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        
-        .history { margin-top: 20px; font-size: 0.85rem; color: #666; text-align: left; max-height: 100px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
+
+        input { padding: 10px; width: 80%; margin-top: 20px; border: 1px solid #ccc; border-radius: 4px; }
+        .manual-btn { background: #666; color: white; border: none; padding: 10px 20px; border-radius: 4px; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📸 Check-in Love Night</h2>
-    <p>Escanea el QR o pega el link</p>
+    <h2>📸 Scanner Love Night</h2>
     
-    <input type="text" id="inputQR" placeholder="Haz clic aquí y escanea..." autocomplete="off">
-    <button id="btnScan">Validar Entrada</button>
+    <div id="reader"></div>
 
-    <div id="mensaje"></div>
-    <div class="history" id="log"></div>
+    <div id="resultado"></div>
+    
+    <details style="margin-top: 30px; text-align: left; color: #777;">
+        <summary>Ingreso Manual (Respaldo)</summary>
+        <div style="text-align: center;">
+            <input type="text" id="manualInput" placeholder="Pega el link aquí...">
+            <button class="manual-btn" onclick="procesarManual()">Validar Manual</button>
+        </div>
+    </details>
 </div>
 
 <script>
-    // --- PEGA AQUÍ LA URL DE TU SCRIPT (la misma que tienes en admin.html) ---
+    // --- TU URL DE APPS SCRIPT ---
     const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
-    // ------------------------------------------------------------------------
+    
+    // Variable para evitar lecturas múltiples muy rápidas
+    let isProcessing = false;
 
-    const inp = document.getElementById('inputQR');
-    const btn = document.getElementById('btnScan');
-    const msg = document.getElementById('mensaje');
-    const log = document.getElementById('log');
-
-    // Detectar "Enter" para escáneres que simulan teclado
-    inp.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            btn.click();
-        }
-    });
-
-    btn.addEventListener('click', () => {
-        const texto = inp.value.trim();
-        if (!texto) return;
-
-        // 1. INTENTAR EXTRAER NOMBRES DEL LINK
-        // Tu QR es un link tipo: .../pase.html?esposo=Juan&esposa=Maria
-        let esposo = "", esposa = "";
+    // --- CONFIGURACIÓN DE LA CÁMARA ---
+    function onScanSuccess(decodedText, decodedResult) {
+        if (isProcessing) return; // Si ya está procesando uno, ignorar
         
+        // El QR trae un link, ej: https://.../pase.html?esposo=X&esposa=Y
+        if (decodedText.includes("esposo=") && decodedText.includes("esposa=")) {
+            beep(); // Sonido de éxito al leer
+            enviarDatos(decodedText);
+        } else {
+            console.log("QR no válido para este evento: " + decodedText);
+        }
+    }
+
+    function onScanFailure(error) {
+        // No hacer nada si falla un frame, es normal mientras busca
+    }
+
+    // Iniciar escáner
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", 
+        { fps: 10, qrbox: {width: 250, height: 250} },
+        /* verbose= */ false);
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+
+    // --- ENVIAR A GOOGLE SHEETS ---
+    function enviarDatos(urlOTexto) {
+        isProcessing = true;
+        mostrar("⏳ Verificando...", "warning");
+
+        // Extraer nombres del link
+        let esposo = "", esposa = "";
         try {
-            // Si es una URL completa
-            if (texto.includes('?')) {
-                const params = new URLSearchParams(texto.split('?')[1]);
+            const urlObj = new URL(urlOTexto);
+            const params = new URLSearchParams(urlObj.search);
+            esposo = params.get('esposo');
+            esposa = params.get('esposa');
+        } catch (e) {
+            // Intento manual de parseo si no es URL completa
+            if(urlOTexto.includes('?')) {
+                const partes = urlOTexto.split('?')[1];
+                const params = new URLSearchParams(partes);
                 esposo = params.get('esposo');
                 esposa = params.get('esposa');
-            } else {
-                // Si por alguna razón escriben manual (poco probable con tu sistema)
-                mostrar("❌ Formato de QR no válido. Debe ser el link del pase.", "error");
-                return;
             }
-        } catch (e) {
-            mostrar("❌ Error leyendo el QR", "error");
-            return;
         }
 
         if (!esposo || !esposa) {
-            mostrar("❌ No se detectaron los nombres en el código.", "error");
+            mostrar("❌ QR Inválido. No tiene nombres.", "error");
+            setTimeout(() => isProcessing = false, 2000);
             return;
         }
 
-        // 2. ENVIAR AL BACKEND
-        btn.disabled = true;
-        btn.innerText = "Verificando...";
-        msg.style.display = 'none';
-
+        // Llamada al Backend
         const form = new URLSearchParams();
         form.append('accion', 'confirmar');
         form.append('esposo', esposo);
@@ -99,46 +114,58 @@
         .then(response => response.json())
         .then(data => {
             if (data.result === 'success') {
-                mostrar(`✅ ¡Bienvenidos! <br><b>${esposo} y ${esposa}</b><br>Hora: ${data.message}`, "success");
-                addToLog(`✅ ${esposo} y ${esposa} (${data.message})`);
-                inp.value = ""; 
-                inp.focus();
+                mostrar(`✅ BIENVENIDOS<br><b>${esposo} y ${esposa}</b><br>Hora: ${data.message}`, "success");
+                // Pausamos 3 segundos antes de permitir leer otro para que vea el mensaje
+                setTimeout(() => { 
+                    document.getElementById('resultado').style.display = 'none';
+                    isProcessing = false; 
+                }, 4000);
             } else if (data.result === 'duplicate') {
-                mostrar(`⚠️ <b>YA INGRESARON</b><br>Pareja: ${esposo} y ${esposa}<br>Entrada previa: ${data.message}`, "warning");
-                beep(); // Sonido de alerta si quieres
+                mostrar(`⚠️ YA ENTRARON<br>${esposo} y ${esposa}<br>Previamente: ${data.message}`, "error");
+                beepError();
+                setTimeout(() => isProcessing = false, 3000);
             } else {
                 mostrar(`❌ Error: ${data.message}`, "error");
+                setTimeout(() => isProcessing = false, 3000);
             }
         })
         .catch(err => {
-            console.error(err);
-            mostrar("❌ Error de conexión. Intente de nuevo.", "error");
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerText = "Validar Entrada";
-            inp.select(); // Seleccionar texto para siguiente escaneo rápido
+            mostrar("❌ Error de conexión", "error");
+            isProcessing = false;
         });
-    });
-
-    function mostrar(txt, tipo) {
-        msg.innerHTML = txt;
-        msg.className = tipo;
-        msg.style.display = 'block';
     }
 
-    function addToLog(txt) {
-        const div = document.createElement('div');
-        div.innerText = txt;
-        log.prepend(div);
+    // --- FUNCIONES AUXILIARES ---
+    function mostrar(txt, clase) {
+        const div = document.getElementById('resultado');
+        div.innerHTML = txt;
+        div.className = clase;
+        div.style.display = 'block';
     }
-    
+
+    function procesarManual() {
+        const val = document.getElementById('manualInput').value;
+        if(val) enviarDatos(val);
+    }
+
     function beep() {
-        // Un pequeño sonido para duplicados (opcional)
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 1000;
+        osc.type = 'sine';
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+        osc.stop(0.1);
+    }
+
+    function beepError() {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.frequency.value = 200; 
         osc.type = 'sawtooth';
-        osc.frequency.value = 400;
         osc.connect(ctx.destination);
         osc.start();
         osc.stop(0.3);
