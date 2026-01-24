@@ -22,7 +22,9 @@
         .col { flex: 1; min-width: 250px; }
         label { font-weight: bold; font-size: 0.9rem; color: #555; display: block; margin-bottom: 5px; }
         select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; }
-        .count-tag { text-align: right; font-size: 0.85rem; color: #777; margin-top: 5px; }
+        
+        .filters-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .count-tag { font-size: 0.9rem; color: #777; font-weight: bold; }
         
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 1000px; margin-top: 10px; }
@@ -37,6 +39,14 @@
         .btn-action { background: #25D366; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 0.9rem; transition: background 0.3s; }
         .btn-action:hover { background: #1ebc57; }
         .btn-action:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Estilos del Botón Reset */
+        .btn-reset { 
+            background: #6c757d; color: white; border: none; padding: 8px 16px; 
+            border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; 
+            display: flex; align-items: center; gap: 8px; transition: background 0.3s;
+        }
+        .btn-reset:hover { background: #5a6268; }
 
         #loading { text-align: center; padding: 50px; color: #888; font-size: 1.2rem; }
         #version { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #ccc; }
@@ -82,8 +92,13 @@
                     <select id="filterEsposa" onchange="syncCouple('esposa')"><option value="">-- Todas --</option></select>
                 </div>
             </div>
-            <div class="count-tag" id="countDisplay">Registros: 0</div>
+            
+            <div class="filters-footer">
+                <button class="btn-reset" onclick="resetAllFilters()">🔄 Restablecer Filtros</button>
+                <div class="count-tag" id="countDisplay">Registros: 0</div>
+            </div>
         </div>
+
         <div class="table-wrap">
             <table id="dataTable">
                 <thead><tr id="tableHead"></tr></thead>
@@ -92,19 +107,17 @@
         </div>
     </div>
 </div>
-<div id="version">v11.0 - BiDirectional</div>
+<div id="version">v12.0 - ResetBtn</div>
 
 <script>
-    // --- TU URL DEL SCRIPT (TU CLON) ---
+    // --- URL SCRIPT ---
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM0E1H3f7GKxcoENFqB2g5uNC46fv9vLDOVD6gYCGMBxgKhKNa5RDv01HsTblb7NgJKg/exec"; 
     
     // IDs Oficiales
     const SHEET_ID = '1slBfBNMEVgWOewNphlFi82fQbs7Y6GtD6Hcplj2D8do';
     const SHEET_GID = '1064363108';
 
-    // =========================================================
-    // 🛠️ MAPEO FIJO DE COLUMNAS
-    // =========================================================
+    // MAPEO DE COLUMNAS
     const COL_ESPOSO    = 1; // B
     const COL_TEL_ESP   = 2; // C
     const COL_ESPOSA    = 3; // D
@@ -126,7 +139,6 @@
     let isFirstLoad = true;
 
     function loadDB(isAutoUpdate = false) {
-        // Anti-caché fuerte
         const t = new Date().getTime();
         const rand = Math.floor(Math.random() * 99999);
         const s = document.createElement('script');
@@ -134,26 +146,20 @@
         document.body.appendChild(s);
     }
 
-    // Actualizar cada 5s
+    // Auto-update
     setInterval(() => loadDB(true), 5000);
 
     window.processData = function(json) {
-        // Limpiamos datos (trim) para evitar errores de espacios
         allData = json.table.rows.map(r => r.c.map(c => (c && c.v !== null) ? String(c.v).trim() : ""));
         
-        // 1. Guardar qué tenemos seleccionado ahora
         const currentEsposo = document.getElementById('filterEsposo').value;
         const currentEsposa = document.getElementById('filterEsposa').value;
 
-        // 2. Reconstruir las listas
         initDropdowns(); 
         
-        // 3. Intentar restaurar la selección si aún es válida
-        // (Si el usuario estaba viendo a "Juan", que siga viendo a "Juan" tras el refresco)
         if(currentEsposo) setDropdownValue('filterEsposo', currentEsposo);
         if(currentEsposa) setDropdownValue('filterEsposa', currentEsposa);
 
-        // 4. Aplicar filtros
         applyFilters();
         
         if(isFirstLoad) {
@@ -166,65 +172,61 @@
     function initDropdowns() {
         const s1 = document.getElementById('filterEsposo'); 
         const s2 = document.getElementById('filterEsposa');
-        
-        // Guardamos selección actual
         const val1 = s1.value;
         const val2 = s2.value;
 
-        // Obtenemos listas únicas
         const list1 = [...new Set(allData.map(r => r[COL_ESPOSO]))].filter(Boolean).sort();
         const list2 = [...new Set(allData.map(r => r[COL_ESPOSA]))].filter(Boolean).sort();
         
-        // Reconstruimos SIEMPRE para asegurar que "Todos" existe
         s1.innerHTML = '<option value="">-- Todos --</option>';
         s2.innerHTML = '<option value="">-- Todas --</option>';
 
         list1.forEach(x => s1.add(new Option(x, x))); 
         list2.forEach(x => s2.add(new Option(x, x)));
         
-        // Restauramos selección si es posible
         if(val1) s1.value = val1;
         if(val2) s2.value = val2;
     }
 
-    // --- FUNCIÓN DE SINCRONIZACIÓN Y RESETEO AGRESIVO ---
     function syncCouple(source) {
         const selEsposo = document.getElementById('filterEsposo');
         const selEsposa = document.getElementById('filterEsposa');
-        
-        // Obtenemos los valores NUEVOS recién seleccionados
         const v1 = selEsposo.value;
         const v2 = selEsposa.value;
         
         if (source === 'esposo') {
             if (v1 === "") {
-                // Si seleccionaste "Todos" en Esposo, BORRAMOS Esposa
-                selEsposa.value = "";
+                selEsposa.selectedIndex = 0;
             } else {
-                // Si seleccionaste un nombre, buscamos su pareja
                 const match = allData.find(r => r[COL_ESPOSO] === v1); 
                 if(match) selEsposa.value = match[COL_ESPOSA];
             }
         } 
-        else if (source === 'esposa') {
+        
+        if (source === 'esposa') {
             if (v2 === "") {
-                // Si seleccionaste "Todas" en Esposa, BORRAMOS Esposo
-                selEsposo.value = "";
+                selEsposo.selectedIndex = 0;
             } else {
-                // Si seleccionaste un nombre, buscamos su pareja
                 const match = allData.find(r => r[COL_ESPOSA] === v2); 
                 if(match) selEsposo.value = match[COL_ESPOSO];
             }
         }
         
-        // Aplicamos el filtro con los nuevos valores
+        applyFilters();
+    }
+
+    // --- NUEVA FUNCIÓN: RESETEAR TODO ---
+    function resetAllFilters() {
+        document.getElementById('filterPago').value = "todos";
+        document.getElementById('filterCheckIn').value = "default";
+        document.getElementById('filterEsposo').selectedIndex = 0;
+        document.getElementById('filterEsposa').selectedIndex = 0;
         applyFilters();
     }
 
     function setDropdownValue(id, value) {
         const dd = document.getElementById(id);
         dd.value = value;
-        // Si falló (ej. el nombre cambió en la BD), resetear a Todos
         if (dd.value !== value) dd.value = "";
     }
 
@@ -246,7 +248,6 @@
             if (fCheck === 'sin_confirmar') passCheck = (checkVal === "");
 
             let passName = true;
-            // Solo filtramos por nombre si NO es vacío
             if (fEsposo !== "" && r[COL_ESPOSO] !== fEsposo) passName = false;
             if (fEsposa !== "" && r[COL_ESPOSA] !== fEsposa) passName = false;
             
