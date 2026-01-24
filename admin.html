@@ -20,29 +20,19 @@
         label { color: var(--vino); font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 5px; }
         select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
         
-        /* BOTÓN VALIDAR (Amarillo Dorado) */
         .btn-validate { 
             background: var(--dorado); color: white; border: none; padding: 10px; 
             border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s;
         }
-        .btn-validate:hover { background: #b59020; transform: translateY(-1px); }
-
-        /* BOTONES WHATSAPP (Inicial: Verde) */
+        
         .btn-wa { 
-            background: #25D366; color: white; border: none; padding: 6px 10px; 
+            background: #25D366; color: white; border: none; padding: 8px 10px; 
             border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; 
             margin: 2px; display: inline-flex; align-items: center; gap: 5px;
-            transition: all 0.2s; width: 100%; justify-content: center;
+            width: 100%; justify-content: center;
         }
-        .btn-wa:hover { background: #1ebc57; }
-        
-        /* BOTONES WHATSAPP (Enviado: Gris Oscuro) */
-        .btn-wa-sent { 
-            background: var(--gris); color: white; opacity: 0.9;
-            border: 1px solid #455a64;
-        }
-        .btn-wa-sent:hover { background: #455a64; opacity: 1; }
+        .btn-wa-sent { background: var(--gris); border: 1px solid #455a64; opacity: 0.9; }
 
         .btn-reset { background: #eee; color: #555; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         
@@ -54,8 +44,6 @@
         .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
         .tag-ok { background: #d4edda; color: #155724; }
         .tag-pending { background: #fff3cd; color: #856404; }
-
-        /* Contenedor de botones en la celda */
         .actions-cell { display: flex; flex-direction: column; gap: 5px; }
     </style>
 </head>
@@ -83,7 +71,7 @@
         <div class="table-wrap"><table id="tab"><thead><tr id="th"></tr></thead><tbody id="tb"></tbody></table></div>
     </div>
 </div>
-<div id="version">v23.0 - Control Individual</div>
+<div id="version">v24.0 - Auto 504 Fix</div>
 
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
@@ -174,14 +162,12 @@
             let isPaid = r[I_PAY].toLowerCase().includes("pagado");
             
             if(isPaid) {
-                // SI ESTÁ PAGADO: Mostramos los dos botones de WhatsApp
                 let div = document.createElement('div');
                 div.className = "actions-cell";
                 div.appendChild(createWaBtn(r, 'man'));
                 div.appendChild(createWaBtn(r, 'woman'));
                 td.appendChild(div);
             } else {
-                // SI ESTÁ PENDIENTE: Botón Validar
                 let b = document.createElement('button'); 
                 b.className = "btn-validate"; 
                 b.innerText = "✅ Validar"; 
@@ -195,29 +181,32 @@
     function createWaBtn(row, who) {
         let b = document.createElement('button');
         let name = who==='man' ? `Él: ${row[I_MAN].split(' ')[0]}` : `Ella: ${row[I_WOM].split(' ')[0]}`;
-        let phone = who==='man' ? row[I_TEL1] : row[I_TEL2];
         
+        // LOGICA DE TELEFONO (CORRECCIÓN HONDURAS)
+        let rawPhone = who==='man' ? row[I_TEL1] : row[I_TEL2];
+        let phone = (rawPhone || "").toString().replace(/\D/g,'');
+        
+        // Si tiene 8 dígitos, le ponemos 504
+        if(phone.length === 8) phone = "504" + phone;
+
         b.className = "btn-wa"; 
         b.innerHTML = `📲 Enviar a ${name}`;
-        b.title = `Enviar a ${phone}`;
+        b.title = `Enviar a +${phone}`;
         
-        // Recuperar estado "Enviado" de la memoria local
-        let key = `sent_${row[I_MAN]}_${who}`; // Clave única
+        let key = `sent_${row[I_MAN]}_${who}`;
         if(localStorage.getItem(key)) {
             b.className = "btn-wa btn-wa-sent";
             b.innerHTML = `✔️ Reenviar a ${name}`;
         }
 
-        let cleanPhone = (phone || "").replace(/\D/g,'');
-        if(cleanPhone.length < 5) {
-            b.style.opacity = "0.5"; b.style.cursor = "not-allowed"; b.title = "Sin número";
+        if(phone.length < 8) { // Mínimo 8 dígitos (sin o con 504)
+            b.style.opacity = "0.5"; b.style.cursor = "not-allowed"; b.title = "Número inválido (<8 dígitos)";
         } else {
             b.onclick = () => {
-                sendWA(row, who);
-                // Marcar como enviado visualmente
+                sendWA(row, who, phone);
                 b.className = "btn-wa btn-wa-sent";
                 b.innerHTML = `✔️ Reenviar a ${name}`;
-                localStorage.setItem(key, "true"); // Guardar en navegador
+                localStorage.setItem(key, "true");
             };
         }
         return b;
@@ -230,7 +219,6 @@
         fetch(API_URL, { method: 'POST', mode: 'no-cors', body: form }).then(() => {
             setTimeout(() => {
                 row[I_PAY] = "Pagado";
-                // Transformar celda inmediatamente a los 2 botones
                 tdElement.innerHTML = '';
                 let div = document.createElement('div');
                 div.className = "actions-cell";
@@ -242,14 +230,12 @@
         });
     }
 
-    function sendWA(row, who) {
+    function sendWA(row, who, cleanPhone) {
         const link = `https://dmendocci.github.io/cena-parejas/pase.html?esposo=${encodeURIComponent(row[I_MAN])}&esposa=${encodeURIComponent(row[I_WOM])}`;
         const txt = `¡Hola! Su registro a "Love Night" está confirmado.\n\nSu pase de acceso:\n${link}\n\n¡Los esperamos!`;
-        let phone = (who==='man' ? row[I_TEL1] : row[I_TEL2]).replace(/\D/g,'');
         
         const baseUrl = isMobile ? "https://api.whatsapp.com/send" : "https://web.whatsapp.com/send";
-        if(phone.length > 5) window.open(`${baseUrl}?phone=${phone}&text=${encodeURIComponent(txt)}`, '_blank');
-        else alert("Número inválido.");
+        window.open(`${baseUrl}?phone=${cleanPhone}&text=${encodeURIComponent(txt)}`, '_blank');
     }
 </script>
 </body>
