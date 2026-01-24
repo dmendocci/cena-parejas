@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner V5 - Final</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Scanner V5.1</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         :root { --bg: #111; --text: #eee; --gold: #d4af37; --green: #2ecc71; --red: #e74c3c; --orange: #e67e22; }
@@ -18,7 +22,6 @@
             padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; 
             text-align: center; display: none; margin-bottom: 30px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
         .success { background: var(--green); color: #fff; }
@@ -26,24 +29,27 @@
         .duplicate { background: var(--orange); color: #fff; border: 2px solid #fff; }
         .warn { background: #f39c12; color: #000; }
 
-        /* Estilo específico para el mensaje de duplicado */
         .duplicate-msg {
-            background: rgba(0,0,0,0.2);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            text-align: left;
-            font-size: 0.95rem;
-            line-height: 1.5;
+            background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;
+            margin-top: 10px; text-align: left; font-size: 0.95rem; line-height: 1.5;
         }
-        .duplicate-msg strong { color: #ffe0b2; }
-
         .big-text { font-size: 1.5rem; font-weight: bold; margin: 10px 0; }
         
         button { 
             padding: 12px 25px; margin-top: 15px; border-radius: 50px; border: none; 
             font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem;
             background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        /* VERSIÓN FLOTANTE */
+        #version-tag {
+            position: fixed; bottom: 10px; right: 10px; 
+            background: crimson; color: white; padding: 5px 10px; 
+            border-radius: 5px; font-size: 0.8rem; font-weight: bold; z-index: 999;
+        }
+        
+        #reload-btn {
+            margin-bottom: 20px; background: #333; font-size: 0.8rem; width: auto; padding: 8px 15px;
         }
         
         #reader__dashboard_section_csr span { display: none !important; }
@@ -52,8 +58,12 @@
 <body>
 
 <div class="header"><h1>📷 Portero Love Night</h1></div>
+<button id="reload-btn" onclick="forceReload()">🔄 Forzar Recarga (Limpiar Cache)</button>
+
 <div id="reader"></div>
 <div id="result" class="status-box"></div>
+
+<div id="version-tag">v5.1 (Anti-Cache)</div>
 
 <audio id="beep-ok" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
 <audio id="beep-error" src="https://assets.mixkit.co/sfx/preview/mixkit-negative-answer-lose-2032.mp3"></audio>
@@ -63,19 +73,31 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
     let isScanning = true;
 
+    // FUNCION PARA BORRAR CACHE
+    function forceReload() {
+        if ('caches' in window) {
+            caches.keys().then((names) => {
+                names.forEach(name => { caches.delete(name); });
+            });
+        }
+        window.location.href = window.location.href.split('?')[0] + '?t=' + new Date().getTime();
+    }
+
     function onScanSuccess(text) {
         if (!isScanning) return;
         
-        // PARSEO ADAPTATIVO (Tarjetas físicas y QR Digital)
         let esposo = "", esposa = "";
 
-        if (text.includes("BODA:")) { // Tarjeta física
+        // LÓGICA TARJETA FÍSICA (Tu imagen 'oo.jpeg')
+        if (text.includes("BODA:")) { 
             try {
                 let clean = text.replace("BODA:", "").replace("ESTADO: PAGADO", "").trim();
                 let parts = clean.split("&");
                 if (parts.length >= 2) { esposo = parts[0].trim(); esposa = parts[1].trim(); }
             } catch(e) {}
-        } else if (text.includes("esposo=")) { // QR Digital
+        } 
+        // LÓGICA QR DIGITAL
+        else if (text.includes("esposo=")) { 
             try {
                 let urlStr = text.startsWith("http") ? text : "http://dummy.com?" + text;
                 const url = new URL(urlStr);
@@ -86,10 +108,9 @@
 
         if (esposo && esposa) {
             isScanning = false;
-            showStatus("warn", "⏳ Verificando...", "Consultando base de datos...");
+            showStatus("warn", "⏳ Verificando...", "Conectando con servidor...");
             validateCheckIn(esposo, esposa);
         } else {
-            // Ignoramos QRs que no sean del evento para no molestar
             console.log("QR Ignorado:", text);
         }
     }
@@ -100,36 +121,31 @@
         fetch(target, { method: 'POST' })
         .then(res => res.json())
         .then(json => {
-            
-            // CASO 1: DUPLICADO CON EL MENSAJE QUE PEDISTE
             if (json.result === 'duplicate') {
                 playAudio('alert');
+                // MENSAJE SOLICITADO
                 showStatus("duplicate", "⚠️ YA REGISTRADO", 
                     `<div class="duplicate-msg">
-                        Usted ya fue validado la <strong>${json.data.fecha}</strong><br>
-                        del teléfono <strong>${json.data.telefono}</strong><br>
-                        por <strong>${json.data.nombres}</strong>
+                        Usted ya fue validado la <strong>${json.data.fecha || 'Fecha desc.'}</strong><br>
+                        del teléfono <strong>${json.data.telefono || 'Sin dato'}</strong><br>
+                        por <strong>${json.data.nombres || 'Pareja'}</strong>
                     </div>`
                 );
-            } 
-            // CASO 2: ÉXITO
-            else if (json.result === 'success') {
+            } else if (json.result === 'success') {
                 playAudio('ok');
                 showStatus("success", "✅ BIENVENIDOS", 
                     `<div class="big-text">${man} & ${woman}</div>
                      <div>Hora: ${json.data.hora}</div>`
                 );
-            } 
-            // CASO 3: ERROR
-            else {
+            } else {
                 playAudio('error');
                 showStatus("error", "⛔ DENEGADO", "No encontrado en la lista.");
             }
         })
         .catch(err => {
             playAudio('error');
-            showStatus("error", "❌ Error de Conexión", 
-                "No pude comunicarme con el servidor.<br>Verifica que actualizaste el script (Nueva Versión).");
+            showStatus("error", "❌ ERROR DE CONEXIÓN", 
+                "El servidor no responde.<br><small>Posible causa: No se actualizó el Script como 'Nueva Versión'.</small>");
         });
     }
 
