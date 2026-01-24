@@ -12,18 +12,12 @@
         .header { width: 100%; background: var(--vino); padding: 15px; text-align: center; border-bottom: 4px solid var(--dorado); box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
         h1 { margin: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Contenedor del scanner */
-        #reader { 
-            width: 100%; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            background: #000;
-        }
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; background: #000; }
 
         .status-box { 
             margin-top: 10px; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; 
-            text-align: center; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-            background: #333;
+            text-align: center; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.5); background: #333;
+            word-wrap: break-word; /* Para que links largos no rompan el diseño */
         }
         
         .status-success { background: var(--verde); }
@@ -33,7 +27,7 @@
 
         .big-icon { font-size: 3rem; display: block; margin-bottom: 10px; }
         .names { font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
-        .msg { font-size: 0.9rem; opacity: 0.9; }
+        .msg { font-size: 0.9rem; opacity: 0.9; line-height: 1.4; }
 
         button.reset-btn {
             background: rgba(255,255,255,0.2); border: 2px solid white; color: white;
@@ -41,11 +35,7 @@
             font-weight: bold; width: 100%; font-size: 1rem;
         }
 
-        /* Ajustes para la librería QR */
-        #reader button { 
-            padding: 10px 20px; background: var(--dorado); color: white; border: none; 
-            border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer;
-        }
+        #reader button { padding: 10px 20px; background: var(--dorado); color: white; border: none; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; }
         #reader select { padding: 8px; border-radius: 5px; margin-bottom: 10px; }
         #reader__dashboard_section_csr span { display: none !important; }
     </style>
@@ -64,41 +54,56 @@
 <audio id="beep-alert" src="https://assets.mixkit.co/sfx/preview/mixkit-game-show-wrong-answer-buzz-950.mp3"></audio>
 
 <script>
-    // URL DEL BACKEND
     const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
 
     let isScanning = true;
 
     function onScanSuccess(decodedText, decodedResult) {
         if (!isScanning) return;
-        
-        // 1. Validar formato Love Night
-        if (!decodedText.includes("pase.html")) {
-            // Si lee otro QR (ej: botella de agua), avisamos pero no detenemos todo
-            console.log("QR Ignorado:", decodedText);
-            showStatus("error", "QR Incorrecto", "No es un pase del evento.");
-            setTimeout(() => { document.getElementById('result').style.display='none'; isScanning=true; }, 2000);
-            isScanning = false;
+
+        // INTENTO DE LECTURA FLEXIBLE (V2.2)
+        // Ya no exigimos "pase.html", solo buscamos los datos
+        let esposo = null;
+        let esposa = null;
+
+        try {
+            // Intento 1: Es una URL completa?
+            const url = new URL(decodedText);
+            esposo = url.searchParams.get("esposo");
+            esposa = url.searchParams.get("esposa");
+        } catch (e) {
+            // Intento 2: ¿Es texto plano tipo query string?
+            try {
+                const params = new URLSearchParams(decodedText);
+                esposo = params.get("esposo");
+                esposa = params.get("esposa");
+            } catch (e2) {}
+        }
+
+        // SI FALLA LA LECTURA DE NOMBRES
+        if (!esposo || !esposa) {
+            // Pausamos para mostrar qué leyó
+            isScanning = false; 
+            playAudio('error');
+            
+            // Mostramos el texto crudo para depurar
+            showStatus("error", "QR Ilegible / Incorrecto", 
+                `<strong>El scanner leyó esto:</strong><br>
+                <div style="background:rgba(0,0,0,0.3); padding:5px; border-radius:4px; font-family:monospace; margin-top:5px; font-size:0.8rem;">
+                ${decodedText}
+                </div><br>
+                <em>Se necesitan los parámetros ?esposo=...&esposa=...</em>`
+            );
             return;
         }
 
-        isScanning = false; // Bloquear lecturas múltiples
-        
-        try {
-            const url = new URL(decodedText);
-            const esposo = url.searchParams.get("esposo");
-            const esposa = url.searchParams.get("esposa");
-            
-            showStatus("warn", "⏳ Verificando...", "Consultando base de datos...");
-            validateCheckIn(esposo, esposa);
-
-        } catch (e) {
-            showStatus("error", "Error QR", "Formato inválido");
-        }
+        // SI HUBO ÉXITO
+        isScanning = false;
+        showStatus("warn", "⏳ Verificando...", `${esposo} & ${esposa}`);
+        validateCheckIn(esposo, esposa);
     }
 
     function validateCheckIn(man, woman) {
-        // Petición al backend
         const target = `${API_URL}?accion=confirmar&esposo=${encodeURIComponent(man)}&esposa=${encodeURIComponent(woman)}`;
         
         fetch(target, { method: 'POST' })
@@ -149,29 +154,10 @@
         if(a) { a.currentTime=0; a.play().catch(e=>console.log(e)); }
     }
 
-    // CONFIGURACIÓN ROBUSTA DE CÁMARA
-    // Calculamos el tamaño del QR Box según la pantalla para que no falle en móviles pequeños
     const width = window.innerWidth;
     const qrboxSize = width > 600 ? 300 : 200; 
-
-    let html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader", 
-        { 
-            fps: 10, 
-            qrbox: qrboxSize,
-            aspectRatio: 1.0,
-            showTorchButtonIfSupported: true,
-            videoConstraints: {
-                facingMode: { exact: "environment" } // Forzar cámara trasera si es posible
-            }
-        }, 
-        /* verbose= */ false
-    );
-    
-    html5QrcodeScanner.render(onScanSuccess, (errorMessage) => {
-        // Los errores de lectura constantes son normales mientras buscas el QR, no hacemos nada.
-    });
-
+    let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: qrboxSize, aspectRatio: 1.0, showTorchButtonIfSupported: true, videoConstraints: { facingMode: { exact: "environment" } } }, false);
+    html5QrcodeScanner.render(onScanSuccess, (errorMessage) => {});
 </script>
 </body>
 </html>
