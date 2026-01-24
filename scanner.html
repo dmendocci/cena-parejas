@@ -3,48 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner - Love Night</title>
+    <title>Scanner V4 - Adaptativo</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        :root { --vino: #741b47; --dorado: #d4af37; --verde: #27ae60; --rojo: #c0392b; --bg: #1a1a1a; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; padding: 0; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        :root { --bg: #111; --text: #eee; --gold: #d4af37; --green: #2ecc71; --red: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; min-height: 100vh; }
         
-        .header { width: 100%; background: var(--vino); padding: 15px; text-align: center; border-bottom: 4px solid var(--dorado); box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
-        h1 { margin: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        .header { background: #741b47; width: 100%; padding: 15px; text-align: center; border-bottom: 4px solid var(--gold); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1 { margin: 0; font-size: 1.2rem; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
 
-        #reader { width: 100%; max-width: 500px; margin: 0 auto; background: #000; }
+        #reader { width: 100%; max-width: 500px; margin: 20px auto; background: #000; border-radius: 8px; overflow: hidden; }
 
         .status-box { 
-            margin-top: 10px; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; 
-            text-align: center; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.5); background: #333;
-            word-wrap: break-word; /* Para que links largos no rompan el diseño */
+            padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; 
+            text-align: center; display: none; margin-bottom: 30px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        .status-success { background: var(--verde); }
-        .status-error { background: var(--rojo); }
-        .status-warn { background: #f39c12; color: #000; }
-        .status-duplicate { background: #e67e22; border: 2px solid white; }
+        .success { background: var(--green); color: #fff; }
+        .error { background: var(--red); color: #fff; }
+        .duplicate { background: #e67e22; color: #fff; border: 2px solid #fff; }
+        .warn { background: #f39c12; color: #000; }
 
-        .big-icon { font-size: 3rem; display: block; margin-bottom: 10px; }
-        .names { font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
-        .msg { font-size: 0.9rem; opacity: 0.9; line-height: 1.4; }
+        .names { font-size: 1.5rem; font-weight: bold; margin: 10px 0; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .meta { font-size: 0.9rem; opacity: 0.9; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 6px; margin-top: 10px; }
 
-        button.reset-btn {
-            background: rgba(255,255,255,0.2); border: 2px solid white; color: white;
-            padding: 10px 20px; border-radius: 30px; margin-top: 15px; cursor: pointer;
-            font-weight: bold; width: 100%; font-size: 1rem;
+        button { 
+            padding: 12px 25px; margin-top: 15px; border-radius: 50px; border: none; 
+            font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem;
+            background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5);
+            transition: 0.2s;
         }
+        button:active { transform: scale(0.95); }
 
-        #reader button { padding: 10px 20px; background: var(--dorado); color: white; border: none; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; }
-        #reader select { padding: 8px; border-radius: 5px; margin-bottom: 10px; }
+        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        /* Ocultar elementos feos de la librería */
         #reader__dashboard_section_csr span { display: none !important; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h1>📷 Portero Love Night</h1>
-</div>
+<div class="header"><h1>📷 Portero Love Night</h1></div>
 
 <div id="reader"></div>
 <div id="result" class="status-box"></div>
@@ -55,52 +55,57 @@
 
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
-
     let isScanning = true;
 
-    function onScanSuccess(decodedText, decodedResult) {
+    function onScanSuccess(text) {
         if (!isScanning) return;
+        
+        // LÓGICA DE PARSEO INTELIGENTE
+        let esposo = "";
+        let esposa = "";
 
-        // INTENTO DE LECTURA FLEXIBLE (V2.2)
-        // Ya no exigimos "pase.html", solo buscamos los datos
-        let esposo = null;
-        let esposa = null;
-
-        try {
-            // Intento 1: Es una URL completa?
-            const url = new URL(decodedText);
-            esposo = url.searchParams.get("esposo");
-            esposa = url.searchParams.get("esposa");
-        } catch (e) {
-            // Intento 2: ¿Es texto plano tipo query string?
+        // CASO 1: Tarjetas Físicas (Texto: "BODA: Dennis & flor ESTADO: PAGADO")
+        if (text.includes("BODA:")) {
             try {
-                const params = new URLSearchParams(decodedText);
-                esposo = params.get("esposo");
-                esposa = params.get("esposa");
-            } catch (e2) {}
+                // Limpiamos el texto basura
+                let clean = text.replace("BODA:", "").replace("ESTADO: PAGADO", "").trim();
+                // Separamos por el "&"
+                let parts = clean.split("&");
+                if (parts.length >= 2) {
+                    esposo = parts[0].trim();
+                    esposa = parts[1].trim();
+                }
+            } catch(e) {}
+        }
+        // CASO 2: QR Web (URL: "...?esposo=Juan&esposa=Maria")
+        else if (text.includes("esposo=") || text.includes("esposa=")) {
+            try {
+                let urlStr = text.startsWith("http") ? text : "http://dummy.com?" + text;
+                const url = new URL(urlStr);
+                esposo = url.searchParams.get("esposo");
+                esposa = url.searchParams.get("esposa");
+            } catch(e) {}
+        }
+        // CASO 3: Texto simple con "&"
+        else if (text.includes("&")) {
+            let parts = text.split("&");
+            if (parts.length >= 2) {
+                esposo = parts[0].trim();
+                esposa = parts[1].trim();
+            }
         }
 
-        // SI FALLA LA LECTURA DE NOMBRES
-        if (!esposo || !esposa) {
-            // Pausamos para mostrar qué leyó
-            isScanning = false; 
+        // VALIDACIÓN FINAL
+        if (esposo && esposa) {
+            isScanning = false;
+            showStatus("warn", "⏳ Validando...", `${esposo} & ${esposa}`);
+            validateCheckIn(esposo, esposa);
+        } else {
+            // Solo mostramos error si no pudimos sacar nombres
+            isScanning = false;
             playAudio('error');
-            
-            // Mostramos el texto crudo para depurar
-            showStatus("error", "QR Ilegible / Incorrecto", 
-                `<strong>El scanner leyó esto:</strong><br>
-                <div style="background:rgba(0,0,0,0.3); padding:5px; border-radius:4px; font-family:monospace; margin-top:5px; font-size:0.8rem;">
-                ${decodedText}
-                </div><br>
-                <em>Se necesitan los parámetros ?esposo=...&esposa=...</em>`
-            );
-            return;
+            showStatus("error", "QR Desconocido", `No pude leer los nombres.<br><small>Leído: ${text.substring(0,30)}...</small>`);
         }
-
-        // SI HUBO ÉXITO
-        isScanning = false;
-        showStatus("warn", "⏳ Verificando...", `${esposo} & ${esposa}`);
-        validateCheckIn(esposo, esposa);
     }
 
     function validateCheckIn(man, woman) {
@@ -111,53 +116,62 @@
         .then(json => {
             if (json.result === 'duplicate') {
                 playAudio('alert');
-                showStatus("duplicate", "⚠️ YA ENTRÓ", 
-                    `Entrada anterior:<br>📅 ${json.data.fecha}<br>📞 ${json.data.telefono}`
+                showStatus("duplicate", "⚠️ YA ENTRARON", 
+                    `<div class="names">${man} & ${woman}</div>
+                     <div class="meta">
+                        📅 Entró: ${json.data.fecha}<br>
+                        📞 Tel: ${json.data.telefono}
+                     </div>`
                 );
             } else if (json.result === 'success') {
                 playAudio('ok');
-                showStatus("success", "✅ ADELANTE", `${man} & ${woman}`);
+                showStatus("success", "✅ BIENVENIDOS", 
+                    `<div class="names">${man} & ${woman}</div>
+                     <div class="meta">Hora: ${json.data}</div>`
+                );
             } else {
                 playAudio('error');
-                showStatus("error", "⛔ DENEGADO", "No encontrado o sin pago.");
+                showStatus("error", "⛔ NO ENCONTRADO", 
+                    `No aparecen en la lista o los nombres no coinciden exactamente.<br>
+                    <small>Buscando: ${man} y ${woman}</small>`);
             }
         })
         .catch(err => {
             playAudio('error');
-            showStatus("error", "❌ Error Red", "Fallo de conexión internet");
+            showStatus("error", "❌ Error de Red", "Revisa tu conexión a internet");
         });
     }
 
-    function showStatus(type, title, msg) {
+    function showStatus(type, title, htmlMsg) {
         const box = document.getElementById('result');
         box.style.display = 'block';
-        box.className = `status-box status-${type}`;
+        box.className = `status-box ${type}`;
         
-        let icon = type==='success'?'🎉':(type==='duplicate'?'✋':'⛔');
-        if(type==='warn') icon='⏳';
-
+        let icon = type==='success'?'🎉':(type==='warn'?'⏳':(type==='duplicate'?'✋':'⛔'));
+        
         box.innerHTML = `
-            <span class="big-icon">${icon}</span>
-            <div class="names">${title}</div>
-            <div class="msg">${msg}</div>
-            <button class="reset-btn" onclick="resetScanner()">Escanear Siguiente</button>
+            <div style="font-size:3rem; margin-bottom:10px;">${icon}</div>
+            <div style="font-size:1.2rem; font-weight:bold; text-transform:uppercase;">${title}</div>
+            <div style="margin-top:10px;">${htmlMsg}</div>
+            <button onclick="reset()">Escanear Siguiente</button>
         `;
     }
 
-    function resetScanner() {
+    function reset() {
         document.getElementById('result').style.display = 'none';
         isScanning = true;
     }
 
     function playAudio(id) {
-        const a = document.getElementById(id === 'ok' ? 'beep-ok' : (id === 'alert' ? 'beep-alert' : 'beep-error'));
-        if(a) { a.currentTime=0; a.play().catch(e=>console.log(e)); }
+        document.getElementById(`beep-${id}`).play().catch(()=>{});
     }
 
+    // Configuración robusta de cámara
     const width = window.innerWidth;
-    const qrboxSize = width > 600 ? 300 : 200; 
-    let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: qrboxSize, aspectRatio: 1.0, showTorchButtonIfSupported: true, videoConstraints: { facingMode: { exact: "environment" } } }, false);
-    html5QrcodeScanner.render(onScanSuccess, (errorMessage) => {});
+    const qrSize = width > 600 ? 300 : 220;
+    let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: qrSize, aspectRatio: 1.0 }, false);
+    scanner.render(onScanSuccess);
 </script>
+
 </body>
 </html>
