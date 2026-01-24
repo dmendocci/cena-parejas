@@ -4,44 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Scanner V8 - Final</title>
+    <title>Scanner V9 - Auditoría</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #222; padding: 10px; text-align: center; color: white; margin: 0; }
-        .card { background: white; max-width: 400px; margin: 0 auto; padding: 10px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); color: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background: #111; padding: 10px; text-align: center; color: white; margin: 0; }
+        .card { background: white; max-width: 400px; margin: 0 auto; padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); color: #333; }
         h2 { color: #741b47; margin: 0 0 5px 0; font-size: 1.2rem; text-transform: uppercase; }
         .version { font-size: 0.7rem; color: #999; margin-bottom: 5px; }
         
-        #reader { width: 250px; height: 250px; margin: 0 auto 10px auto; border: 3px solid #333; border-radius: 8px; background: black; overflow: hidden; }
+        #reader { width: 250px; height: 250px; margin: 0 auto 10px auto; border: 4px solid #333; border-radius: 12px; background: black; overflow: hidden; }
         
-        .status-box { padding: 10px; margin-top: 5px; border-radius: 8px; display: none; }
+        .status-box { padding: 12px; margin-top: 5px; border-radius: 8px; display: none; }
         
-        /* ESTILOS DE TEXTO */
-        .titulo-msg { font-size: 1.4rem; font-weight: 900; display: block; margin-bottom: 5px; text-transform: uppercase; }
-        .pareja-msg { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #333; display: block; }
-        .detalle-msg { font-size: 0.95rem; line-height: 1.4; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 6px; text-align: left; border: 1px solid rgba(0,0,0,0.1); }
-        .sub-label { color: #555; font-size: 0.85rem; font-weight: bold; display: block; margin-top: 5px; }
+        /* TEXTOS */
+        .titulo-msg { font-size: 1.5rem; font-weight: 900; display: block; margin-bottom: 5px; text-transform: uppercase; line-height: 1; }
+        .pareja-msg { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; color: #444; display: block; }
+        .detalle-msg { font-size: 0.9rem; line-height: 1.4; background: rgba(240,240,240,0.9); padding: 10px; border-radius: 6px; text-align: left; border: 1px solid #ddd; }
+        
+        .label-rojo { color: #c0392b; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; display: block; margin-top: 8px; }
 
-        /* CLASES DE COLOR */
-        .success { background: #2ecc71; color: #fff; border: 2px solid #27ae60; }
-        .success .pareja-msg { color: #fff; }
-        .success .detalle-msg { color: #004d26; text-align: center; }
+        /* ESTADOS */
+        .success { background: #27ae60; color: white; border: 2px solid #219150; }
+        .success .pareja-msg { color: white; }
+        .success .detalle-msg { color: #004d26; background: rgba(255,255,255,0.9); text-align: center; }
 
-        .duplicate { background: #f1c40f; color: #7f6000; border: 2px solid #f39c12; }
+        .duplicate { background: #f39c12; color: #5a4200; border: 2px solid #e67e22; }
         .duplicate .titulo-msg { color: #d35400; } 
-        .duplicate .pareja-msg { color: #000; }
         
-        .error { background: #e74c3c; color: white; font-weight: bold; }
-        .processing { background: #3498db; color: white; font-weight: bold; }
+        .error { background: #c0392b; color: white; }
+        .processing { background: #2980b9; color: white; }
 
-        button { padding: 10px; width: 100%; background: #34495e; color: white; border: none; border-radius: 5px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: none; }
+        button { padding: 12px; width: 100%; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h2>📸 Check-in</h2>
-    <div class="version">V8.0 - Formato Exacto</div>
+    <div class="version">V9.0 - Auditoría</div>
     
     <div id="reader"></div>
     <div id="mensaje" class="status-box"></div>
@@ -58,7 +58,7 @@
         if (isProcessing) return; 
 
         let esposo = "", esposa = "";
-        // Parsear QR
+        // Lógica de extracción (Texto y URL)
         if (decodedText.toUpperCase().includes("BODA:")) {
             try {
                 const match = decodedText.match(/BODA:\s*(.*?)\s*&\s*(.*?)\s*ESTADO:/i);
@@ -82,7 +82,7 @@
     function stopCameraAndSend(esposo, esposa) {
         isProcessing = true;
         html5QrcodeScanner.pause(); 
-        mostrar("⏳ Validando...", "processing");
+        mostrar("⏳ Buscando en lista...", "processing");
         
         const form = new URLSearchParams();
         form.append('accion', 'confirmar');
@@ -92,35 +92,34 @@
         fetch(API_URL, { method: 'POST', body: form })
         .then(res => res.json())
         .then(data => {
-            let info = data.message; // Aquí viene el objeto con {nombre1, tel1, etc...}
-
+            let info = data.message; 
+            
             if (data.result === 'success') {
                 mostrar(`
                     <span class="titulo-msg">✅ ADELANTE</span>
-                    <span class="pareja-msg">${info.nombre1} / ${info.nombre2}</span>
-                    <div class="detalle-msg">Hora entrada: ${info.hora}</div>
+                    <span class="pareja-msg">${info.nombre1} & ${info.nombre2}</span>
+                    <div class="detalle-msg">
+                        <b>Entrada Registrada</b><br>
+                        Hora: ${info.hora}
+                    </div>
                 `, "success");
                 beep(1000, 0.2); 
             } else if (data.result === 'duplicate') {
+                // FORMATO DE AUDITORÍA
+                let responsable = info.responsable || "Pareja (Datos antiguos)";
                 
-                // --- AQUI ESTA EL FORMATO SOLICITADO ---
-                // Si el backend no se ha actualizado, info será un string viejo, así que protegemos:
-                let n1 = info.nombre1 || esposo;
-                let n2 = info.nombre2 || esposa;
-                let t1 = info.tel1 || "(Actualizar Backend)";
-                let t2 = info.tel2 || "(Actualizar Backend)";
-                let h  = info.hora  || "---";
-
                 mostrar(`
-                    <span class="titulo-msg">⚠️ Ya se registraron</span>
-                    <span class="pareja-msg">${n1} / ${n2}</span>
+                    <span class="titulo-msg">⛔ YA SE REGISTRARON</span>
+                    <span class="pareja-msg">${info.nombre1} / ${info.nombre2}</span>
                     <div class="detalle-msg">
-                        Previamente: <b>${h}</b>
-                        <hr style="opacity:0.3; margin: 8px 0;">
-                        <span class="sub-label">La persona que se registró es:</span>
-                        👤 <b>${n1}</b> - Tel: ${t1}<br>
-                        o<br>
-                        👤 <b>${n2}</b> - Tel: ${t2}
+                        <b>Previamente:</b> ${info.hora}<br>
+                        <span class="label-rojo">Check-in inicial realizado por:</span>
+                        👤 ${responsable}
+                        
+                        <hr style="opacity:0.3; margin:8px 0;">
+                        <b>📞 Teléfonos de contacto:</b><br>
+                        Él: ${info.tel1}<br>
+                        Ella: ${info.tel2}
                     </div>
                 `, "duplicate");
                 beep(200, 0.5); 
