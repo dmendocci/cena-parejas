@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Scanner V9 - Auditoría</title>
+    <title>Scanner V10 - Selección</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #111; padding: 10px; text-align: center; color: white; margin: 0; }
-        .card { background: white; max-width: 400px; margin: 0 auto; padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); color: #333; }
+        .card { background: white; max-width: 400px; margin: 0 auto; padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); color: #333; position: relative; }
         h2 { color: #741b47; margin: 0 0 5px 0; font-size: 1.2rem; text-transform: uppercase; }
         .version { font-size: 0.7rem; color: #999; margin-bottom: 5px; }
         
@@ -16,12 +16,20 @@
         
         .status-box { padding: 12px; margin-top: 5px; border-radius: 8px; display: none; }
         
+        /* MODAL DE SELECCIÓN (Quién presenta) */
+        #selectionModal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); border-radius: 12px; z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
+        .sel-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #741b47; }
+        .btn-who { width: 80%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; color: white; }
+        .btn-man { background: #2980b9; }
+        .btn-woman { background: #8e44ad; }
+        .btn-who:active { transform: scale(0.95); }
+
         /* TEXTOS */
         .titulo-msg { font-size: 1.5rem; font-weight: 900; display: block; margin-bottom: 5px; text-transform: uppercase; line-height: 1; }
         .pareja-msg { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; color: #444; display: block; }
-        .detalle-msg { font-size: 0.9rem; line-height: 1.4; background: rgba(240,240,240,0.9); padding: 10px; border-radius: 6px; text-align: left; border: 1px solid #ddd; }
+        .detalle-msg { font-size: 0.95rem; line-height: 1.4; background: rgba(240,240,240,0.9); padding: 10px; border-radius: 6px; text-align: left; border: 1px solid #ddd; }
         
-        .label-rojo { color: #c0392b; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; display: block; margin-top: 8px; }
+        .label-rojo { color: #c0392b; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; display: block; margin-top: 8px; border-bottom: 1px solid #e74c3c; padding-bottom: 2px; margin-bottom: 5px;}
 
         /* ESTADOS */
         .success { background: #27ae60; color: white; border: 2px solid #219150; }
@@ -34,18 +42,25 @@
         .error { background: #c0392b; color: white; }
         .processing { background: #2980b9; color: white; }
 
-        button { padding: 12px; width: 100%; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: none; }
+        button#btnReset { padding: 12px; width: 100%; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h2>📸 Check-in</h2>
-    <div class="version">V9.0 - Auditoría</div>
+    <div class="version">V10.0 - Identificación Exacta</div>
     
     <div id="reader"></div>
     <div id="mensaje" class="status-box"></div>
     <button id="btnReset" onclick="reiniciar()">🔄 SIGUIENTE</button>
+
+    <div id="selectionModal">
+        <div class="sel-title">¿Quién presenta la entrada?</div>
+        <button class="btn-who btn-man" id="btnMan" onclick="selectPerson('man')">👨 ESPOSO</button>
+        <button class="btn-who btn-woman" id="btnWoman" onclick="selectPerson('woman')">👩 ESPOSA</button>
+        <button style="margin-top:20px; background:transparent; border:none; color:#999; text-decoration:underline;" onclick="cancelSelection()">Cancelar</button>
+    </div>
 </div>
 
 <script>
@@ -53,12 +68,16 @@
     
     let html5QrcodeScanner;
     let isProcessing = false;
+    
+    // Variables temporales para guardar datos escaneados
+    let tempEsposo = "";
+    let tempEsposa = "";
 
     function onScanSuccess(decodedText) {
         if (isProcessing) return; 
 
         let esposo = "", esposa = "";
-        // Lógica de extracción (Texto y URL)
+        // Parsear QR
         if (decodedText.toUpperCase().includes("BODA:")) {
             try {
                 const match = decodedText.match(/BODA:\s*(.*?)\s*&\s*(.*?)\s*ESTADO:/i);
@@ -72,22 +91,47 @@
         }
 
         if (esposo && esposa) {
-            stopCameraAndSend(esposo, esposa);
+            // DETENER ESCANEO Y PEDIR CONFIRMACIÓN
+            html5QrcodeScanner.pause();
+            promptSelection(esposo, esposa);
         } else if(decodedText.includes("BODA")) {
-            mostrar("⚠️ No se pudo leer bien", "error");
+            mostrar("⚠️ Lectura incorrecta", "error");
             setTimeout(() => { document.getElementById('mensaje').style.display='none'; }, 1500);
         }
     }
 
-    function stopCameraAndSend(esposo, esposa) {
+    // --- INTERFAZ DE SELECCIÓN ---
+    function promptSelection(esposo, esposa) {
+        tempEsposo = esposo;
+        tempEsposa = esposa;
+        
+        // Ponemos los nombres en los botones
+        document.getElementById('btnMan').innerText = "👨 " + esposo;
+        document.getElementById('btnWoman').innerText = "👩 " + esposa;
+        
+        document.getElementById('selectionModal').style.display = 'flex';
+    }
+
+    function selectPerson(who) {
+        document.getElementById('selectionModal').style.display = 'none';
+        enviarAlBackend(tempEsposo, tempEsposa, who);
+    }
+
+    function cancelSelection() {
+        document.getElementById('selectionModal').style.display = 'none';
+        html5QrcodeScanner.resume();
+    }
+
+    // --- ENVÍO AL BACKEND ---
+    function enviarAlBackend(esposo, esposa, quien) {
         isProcessing = true;
-        html5QrcodeScanner.pause(); 
-        mostrar("⏳ Buscando en lista...", "processing");
+        mostrar("⏳ Validando...", "processing");
         
         const form = new URLSearchParams();
         form.append('accion', 'confirmar');
         form.append('esposo', esposo);
         form.append('esposa', esposa);
+        form.append('quien', quien); // 'man' o 'woman'
 
         fetch(API_URL, { method: 'POST', body: form })
         .then(res => res.json())
@@ -99,27 +143,22 @@
                     <span class="titulo-msg">✅ ADELANTE</span>
                     <span class="pareja-msg">${info.nombre1} & ${info.nombre2}</span>
                     <div class="detalle-msg">
-                        <b>Entrada Registrada</b><br>
-                        Hora: ${info.hora}
+                        <b>Registrado por:</b><br>
+                        ${info.registradoPor}
                     </div>
                 `, "success");
                 beep(1000, 0.2); 
             } else if (data.result === 'duplicate') {
-                // FORMATO DE AUDITORÍA
-                let responsable = info.responsable || "Pareja (Datos antiguos)";
+                // INFO EXACTA DE QUIEN REGISTRÓ
+                let detalleRegistro = info.infoQuien || "Datos no disponibles";
                 
                 mostrar(`
                     <span class="titulo-msg">⛔ YA SE REGISTRARON</span>
                     <span class="pareja-msg">${info.nombre1} / ${info.nombre2}</span>
                     <div class="detalle-msg">
                         <b>Previamente:</b> ${info.hora}<br>
-                        <span class="label-rojo">Check-in inicial realizado por:</span>
-                        👤 ${responsable}
-                        
-                        <hr style="opacity:0.3; margin:8px 0;">
-                        <b>📞 Teléfonos de contacto:</b><br>
-                        Él: ${info.tel1}<br>
-                        Ella: ${info.tel2}
+                        <span class="label-rojo">La persona que se registró fue:</span>
+                        👤 ${detalleRegistro}
                     </div>
                 `, "duplicate");
                 beep(200, 0.5); 
