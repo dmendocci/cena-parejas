@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Despacho de QRs</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; }
+        
+        h1 { color: #2c3e50; text-align: center; font-size: 1.5rem; margin-bottom: 20px; }
+        
+        /* Botón Principal de Carga */
+        .btn-load { width: 100%; padding: 15px; background: #741b47; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
+        .btn-load:active { transform: scale(0.98); }
+
+        /* Tarjeta de Pareja */
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #d4af37; animation: fadeIn 0.3s; }
+        
+        .names { font-size: 1.2rem; font-weight: bold; color: #741b47; margin-bottom: 15px; text-align: center; }
+        
+        /* Botones de WhatsApp */
+        .wa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .btn-wa { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; font-size: 0.9rem; text-align: center; height: 60px; transition: 0.2s; }
+        .wa-man { background: #2980b9; }
+        .wa-woman { background: #8e44ad; }
+        
+        /* Estado Sin Teléfono */
+        .no-phone { background: #95a5a6; cursor: not-allowed; opacity: 0.6; pointer-events: none; }
+        
+        /* Botón Finalizar */
+        .btn-done { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; }
+        .btn-done:hover { background: #219150; }
+
+        .loading { text-align: center; color: #777; font-style: italic; }
+        .empty { text-align: center; padding: 30px; color: #aaa; background: white; border-radius: 8px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📤 Enviar Pases QR</h1>
+    
+    <button class="btn-load" onclick="buscarPendientes()">🔄 Revisar si hay documentos nuevos</button>
+
+    <div id="listaResultados"></div>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyqplGmpQWsyk2diCIuQK0_VqP-GMrHYV0mvvtD6C1lRQvkP_n2bzNvzB3TOAoBbhOK/exec";
+
+    function buscarPendientes() {
+        const cont = document.getElementById('listaResultados');
+        cont.innerHTML = '<div class="loading">🔍 Buscando registros con pago pendiente...</div>';
+
+        fetch(API_URL + "?accion=listar_envios")
+        .then(res => res.json())
+        .then(data => {
+            if(data.result === 'success') {
+                renderizar(data.message);
+            } else {
+                cont.innerHTML = `<div class="empty">❌ Error: ${data.message}</div>`;
+            }
+        })
+        .catch(e => cont.innerHTML = `<div class="empty">❌ Error de conexión</div>`);
+    }
+
+    function renderizar(lista) {
+        const cont = document.getElementById('listaResultados');
+        cont.innerHTML = "";
+
+        if(lista.length === 0) {
+            cont.innerHTML = `<div class="empty">✨ No hay envíos pendientes.<br><small>Todo está marcado como pagado.</small></div>`;
+            return;
+        }
+
+        lista.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `card-${item.fila}`;
+            
+            // Lógica WhatsApp
+            const msg = `¡Hola! Su pago ha sido procesado ✅.\n\nAquí tienen su pase de acceso (QR):\n${item.link}\n\n¡Nos vemos en Love Night!`;
+            const encMsg = encodeURIComponent(msg);
+            
+            // Preparar Teléfonos
+            let t1 = limpiarTel(item.tel1);
+            let t2 = limpiarTel(item.tel2);
+            
+            // Botón Esposo
+            let btnMan = "";
+            if(t1) {
+                btnMan = `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" class="btn-wa wa-man">📲 Enviar a Esposo<br><small>${item.esposo.split(' ')[0]}</small></a>`;
+            } else {
+                btnMan = `<div class="btn-wa no-phone">🚫 No hay teléfono<br><small>Registrado</small></div>`;
+            }
+
+            // Botón Esposa
+            let btnWoman = "";
+            if(t2) {
+                btnWoman = `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" class="btn-wa wa-woman">📲 Enviar a Esposa<br><small>${item.esposa.split(' ')[0]}</small></a>`;
+            } else {
+                btnWoman = `<div class="btn-wa no-phone">🚫 No hay teléfono<br><small>Registrado</small></div>`;
+            }
+
+            card.innerHTML = `
+                <div class="names">${item.esposo} & ${item.esposa}</div>
+                
+                <div class="wa-grid">
+                    ${btnMan}
+                    ${btnWoman}
+                </div>
+
+                <button class="btn-done" onclick="marcarPagado(${item.fila}, '${item.link}', this)">✅ Ya envié los QR (Marcar Pagado)</button>
+            `;
+            cont.appendChild(card);
+        });
+    }
+
+    function marcarPagado(fila, link, btn) {
+        if(!confirm("¿Seguro que ya enviaste los QRs? Se marcará como PAGADO.")) return;
+
+        btn.disabled = true;
+        btn.innerText = "⏳ Guardando...";
+        btn.style.backgroundColor = "#999";
+
+        const form = new URLSearchParams();
+        form.append('accion', 'marcar_enviado');
+        form.append('fila', fila);
+        form.append('link', link); // Enviamos el link para asegurar que se guarde en Col K
+
+        fetch(API_URL, { method: 'POST', body: form })
+        .then(res => res.json())
+        .then(data => {
+            if(data.result === 'success') {
+                // Efecto visual de eliminación
+                const card = document.getElementById(`card-${fila}`);
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 300);
+                
+                // Chequear si queda algo
+                setTimeout(() => {
+                    if(document.querySelectorAll('.card').length === 0) {
+                        document.getElementById('listaResultados').innerHTML = `<div class="empty">✨ ¡Lista completada!</div>`;
+                    }
+                }, 400);
+            } else {
+                alert("Error: " + data.message);
+                btn.disabled = false;
+                btn.innerText = "✅ Ya envié los QR (Marcar Pagado)";
+            }
+        });
+    }
+
+    function limpiarTel(tel) {
+        if(!tel) return null;
+        let t = tel.toString().replace(/\D/g, ''); // Solo números
+        if(t.length < 8) return null; // Muy corto para ser real
+        if(t.length === 8) return "504" + t; // Agregar código Honduras
+        return t;
+    }
+</script>
+
+</body>
+</html>
