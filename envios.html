@@ -4,35 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Despacho de QRs</title>
+    <title>Despacho y Reenvío QRs</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; padding: 20px; color: #333; }
         .container { max-width: 600px; margin: 0 auto; }
         
         h1 { color: #2c3e50; text-align: center; font-size: 1.5rem; margin-bottom: 20px; }
         
-        /* Botón Principal de Carga */
-        .btn-load { width: 100%; padding: 15px; background: #741b47; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
-        .btn-load:active { transform: scale(0.98); }
-
-        /* Tarjeta de Pareja */
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #d4af37; animation: fadeIn 0.3s; }
+        /* BARRA DE BÚSQUEDA */
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .inp-search { flex: 1; padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        .btn-search { padding: 15px 20px; background: #2c3e50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
+        /* Botón Pendientes */
+        .btn-load { width: 100%; padding: 15px; background: #741b47; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
+        .btn-load:hover { background: #5c1538; }
+
+        /* Tarjeta */
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #d4af37; animation: fadeIn 0.3s; position: relative; }
+        .card.pagado { border-left-color: #27ae60; background: #f9fff9; }
+        
+        .badge { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-weight: bold; }
+        .badge-pendiente { background: #ffeeba; color: #856404; }
+        .badge-pagado { background: #d4edda; color: #155724; }
+
         .names { font-size: 1.2rem; font-weight: bold; color: #741b47; margin-bottom: 15px; text-align: center; }
         
-        /* Botones de WhatsApp */
         .wa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .btn-wa { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; font-size: 0.9rem; text-align: center; height: 60px; transition: 0.2s; }
+        
+        .btn-wa { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; font-size: 0.9rem; text-align: center; min-height: 70px; transition: 0.3s; border: 1px solid transparent; }
         .wa-man { background: #2980b9; }
         .wa-woman { background: #8e44ad; }
-        
-        /* Estado Sin Teléfono */
+        .wa-man:hover { background: #21618c; }
+        .wa-woman:hover { background: #71368a; }
+
+        .btn-wa.enviado { background: #4a4a4a; border: 1px solid #333; }
         .no-phone { background: #95a5a6; cursor: not-allowed; opacity: 0.6; pointer-events: none; }
         
-        /* Botón Finalizar */
         .btn-done { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; }
-        .btn-done:hover { background: #219150; }
-
+        
+        .timestamp { font-size: 0.75rem; color: #f1c40f; margin-top: 5px; font-weight: normal; }
         .loading { text-align: center; color: #777; font-style: italic; }
         .empty { text-align: center; padding: 30px; color: #aaa; background: white; border-radius: 8px; }
 
@@ -42,21 +53,47 @@
 <body>
 
 <div class="container">
-    <h1>📤 Enviar Pases QR</h1>
+    <h1>📤 Envío de Pases</h1>
     
-    <button class="btn-load" onclick="buscarPendientes()">🔄 Revisar si hay documentos nuevos</button>
+    <button class="btn-load" onclick="cargarPendientes()">🔄 Ver Solo Pendientes Nuevos</button>
+
+    <div class="search-box">
+        <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar nombre para reenviar..." onkeypress="handleEnter(event)">
+        <button class="btn-search" onclick="buscarPersona()">🔍 Buscar</button>
+    </div>
 
     <div id="listaResultados"></div>
 </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyqplGmpQWsyk2diCIuQK0_VqP-GMrHYV0mvvtD6C1lRQvkP_n2bzNvzB3TOAoBbhOK/exec";
+    // ⬇️ PEGA AQUÍ TU URL NUEVA (La que termina en /exec) ⬇️
+    const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
+    // ⬆️ -------------------------------------------------- ⬆️
 
-    function buscarPendientes() {
+    function cargarPendientes() {
+        document.getElementById('txtBuscar').value = ""; // Limpiar busqueda
+        buscarAPI("listar_envios", {});
+    }
+
+    function buscarPersona() {
+        const txt = document.getElementById('txtBuscar').value.trim();
+        if(!txt) { alert("Escribe un nombre"); return; }
+        buscarAPI("buscar_pareja", { texto: txt });
+    }
+
+    function handleEnter(e) {
+        if(e.key === "Enter") buscarPersona();
+    }
+
+    function buscarAPI(accion, params) {
         const cont = document.getElementById('listaResultados');
-        cont.innerHTML = '<div class="loading">🔍 Buscando registros con pago pendiente...</div>';
+        cont.innerHTML = '<div class="loading">⏳ Consultando...</div>';
 
-        fetch(API_URL + "?accion=listar_envios")
+        const url = new URL(API_URL);
+        url.searchParams.append("accion", accion);
+        for (const key in params) url.searchParams.append(key, params[key]);
+
+        fetch(url)
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
@@ -73,93 +110,89 @@
         cont.innerHTML = "";
 
         if(lista.length === 0) {
-            cont.innerHTML = `<div class="empty">✨ No hay envíos pendientes.<br><small>Todo está marcado como pagado.</small></div>`;
+            cont.innerHTML = `<div class="empty">🤷‍♂️ No se encontraron registros.</div>`;
             return;
         }
 
         lista.forEach(item => {
+            const esPagado = item.estado === "Pagado";
+            const claseCard = esPagado ? "card pagado" : "card";
+            const badge = esPagado 
+                ? `<div class="badge badge-pagado">✔ PAGADO</div>` 
+                : `<div class="badge badge-pendiente">⏳ PENDIENTE</div>`;
+
             const card = document.createElement('div');
-            card.className = 'card';
+            card.className = claseCard;
             card.id = `card-${item.fila}`;
             
-            // Lógica WhatsApp
             const msg = `¡Hola! Su pago ha sido procesado ✅.\n\nAquí tienen su pase de acceso (QR):\n${item.link}\n\n¡Nos vemos en Love Night!`;
             const encMsg = encodeURIComponent(msg);
             
-            // Preparar Teléfonos
             let t1 = limpiarTel(item.tel1);
             let t2 = limpiarTel(item.tel2);
             
-            // Botón Esposo
-            let btnMan = "";
-            if(t1) {
-                btnMan = `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" class="btn-wa wa-man">📲 Enviar a Esposo<br><small>${item.esposo.split(' ')[0]}</small></a>`;
-            } else {
-                btnMan = `<div class="btn-wa no-phone">🚫 No hay teléfono<br><small>Registrado</small></div>`;
-            }
+            // Botones
+            let btnMan = t1 
+                ? `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" class="btn-wa wa-man" onclick="marcarEnviado(this)"><span>📲 Esposo</span><small>${item.esposo.split(' ')[0]}</small></a>`
+                : `<div class="btn-wa no-phone">🚫 Sin Tel<br><small>Esposo</small></div>`;
 
-            // Botón Esposa
-            let btnWoman = "";
-            if(t2) {
-                btnWoman = `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" class="btn-wa wa-woman">📲 Enviar a Esposa<br><small>${item.esposa.split(' ')[0]}</small></a>`;
-            } else {
-                btnWoman = `<div class="btn-wa no-phone">🚫 No hay teléfono<br><small>Registrado</small></div>`;
-            }
+            let btnWoman = t2
+                ? `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" class="btn-wa wa-woman" onclick="marcarEnviado(this)"><span>📲 Esposa</span><small>${item.esposa.split(' ')[0]}</small></a>`
+                : `<div class="btn-wa no-phone">🚫 Sin Tel<br><small>Esposa</small></div>`;
+
+            // El botón verde solo sale si NO está pagado aún
+            let btnFinalizar = esPagado 
+                ? `<div style="text-align:center; color:#27ae60; font-weight:bold; margin-top:10px;">✅ QR ya generado</div>`
+                : `<button class="btn-done" onclick="marcarPagado(${item.fila}, '${item.link}', this)">✅ Finalizar (Marcar Pagado)</button>`;
 
             card.innerHTML = `
+                ${badge}
                 <div class="names">${item.esposo} & ${item.esposa}</div>
-                
-                <div class="wa-grid">
-                    ${btnMan}
-                    ${btnWoman}
-                </div>
-
-                <button class="btn-done" onclick="marcarPagado(${item.fila}, '${item.link}', this)">✅ Ya envié los QR (Marcar Pagado)</button>
+                <div class="wa-grid">${btnMan}${btnWoman}</div>
+                ${btnFinalizar}
             `;
             cont.appendChild(card);
         });
     }
 
+    function marcarEnviado(btn) {
+        const ahora = new Date();
+        const fecha = ahora.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        const hora = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        btn.classList.add('enviado');
+        if(!btn.innerHTML.includes("Enviado")) { 
+            btn.innerHTML += `<div class="timestamp">✔ Reenviado ${fecha} ${hora}</div>`;
+        }
+    }
+
     function marcarPagado(fila, link, btn) {
-        if(!confirm("¿Seguro que ya enviaste los QRs? Se marcará como PAGADO.")) return;
-
-        btn.disabled = true;
-        btn.innerText = "⏳ Guardando...";
-        btn.style.backgroundColor = "#999";
-
+        if(!confirm("¿Marcar como COMPLETADO?")) return;
+        btn.disabled = true; btn.innerText = "⏳ Guardando..."; btn.style.backgroundColor = "#999";
+        
         const form = new URLSearchParams();
         form.append('accion', 'marcar_enviado');
         form.append('fila', fila);
-        form.append('link', link); // Enviamos el link para asegurar que se guarde en Col K
+        form.append('link', link);
 
         fetch(API_URL, { method: 'POST', body: form })
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                // Efecto visual de eliminación
                 const card = document.getElementById(`card-${fila}`);
                 card.style.opacity = '0';
                 setTimeout(() => card.remove(), 300);
-                
-                // Chequear si queda algo
-                setTimeout(() => {
-                    if(document.querySelectorAll('.card').length === 0) {
-                        document.getElementById('listaResultados').innerHTML = `<div class="empty">✨ ¡Lista completada!</div>`;
-                    }
-                }, 400);
             } else {
                 alert("Error: " + data.message);
                 btn.disabled = false;
-                btn.innerText = "✅ Ya envié los QR (Marcar Pagado)";
             }
         });
     }
 
     function limpiarTel(tel) {
         if(!tel) return null;
-        let t = tel.toString().replace(/\D/g, ''); // Solo números
-        if(t.length < 8) return null; // Muy corto para ser real
-        if(t.length === 8) return "504" + t; // Agregar código Honduras
+        let t = tel.toString().replace(/\D/g, '');
+        if(t.length < 8) return null;
+        if(t.length === 8) return "504" + t;
         return t;
     }
 </script>
