@@ -39,7 +39,7 @@
             text-align: center;
         }
 
-        /* 1. ÍCONO LAZO */
+        /* 1. ÍCONO LAZO (Arriba del todo) */
         .knot-icon {
             width: 100px;
             height: auto;
@@ -47,16 +47,16 @@
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
         }
 
-        /* 2. TÍTULOS CURSIVOS */
+        /* 2. TÍTULOS */
         .cursive-font {
             font-family: 'Great Vibes', cursive;
             line-height: 1.1;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
         .main-title { font-size: 2.8rem; margin: 0; }
-        .sub-title { font-size: 2.2rem; margin-top: 5px; margin-bottom: 15px; color: #ffebd7; }
+        .sub-title { font-size: 2.2rem; margin-top: 5px; margin-bottom: 20px; color: #ffebd7; }
 
-        /* 3. BOTÓN VERDE (Debajo del título) */
+        /* 3. BOTÓN VERDE (Confirmación) */
         .status-badge {
             background-color: #dcedc8; 
             color: #2e7d32; 
@@ -66,17 +66,17 @@
             font-size: 1rem;
             text-transform: uppercase;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            margin-bottom: 25px; /* Separación con los nombres */
+            margin-bottom: 25px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
         }
 
-        /* 4. NOMBRES */
+        /* 4. NOMBRES DE LA PAREJA */
         .couple-names {
             font-family: 'Great Vibes', cursive;
             font-size: 2.8rem; 
-            line-height: 1.1;
+            line-height: 1.2;
             margin-bottom: 30px;
             text-shadow: 2px 2px 5px rgba(0,0,0,0.4);
             width: 100%;
@@ -94,16 +94,14 @@
             display: inline-block;
         }
 
-        /* 6. PIE DE PÁGINA (Debajo del QR) */
+        /* 6. INSTRUCCIONES (Abajo del QR) */
         .footer {
-            font-size: 1.1rem;
+            font-size: 1rem;
             line-height: 1.5;
-            font-weight: 700; /* Negrita */
+            font-weight: 700; 
             opacity: 0.95;
             margin-top: 5px;
         }
-
-        .error-msg { color: #ffcccc; font-size: 1.2rem; display: none; margin-top: 20px;}
     </style>
 </head>
 <body>
@@ -134,39 +132,34 @@
             Presenta este código al llegar.<br>
             Válido para un único ingreso.
         </div>
-        
-        <div id="error" class="error-msg">⚠ Enlace incompleto</div>
     </div>
 
     <script>
         const params = new URLSearchParams(window.location.search);
-        const esposo = params.get('esposo');
-        const esposa = params.get('esposa');
+        
+        // Usemos valores por defecto si no hay datos en la URL
+        // Así siempre verás el diseño completo al abrir el archivo
+        const esposo = params.get('esposo') || "Nombre Esposo";
+        const esposa = params.get('esposa') || "Nombre Esposa";
 
-        if (esposo && esposa) {
-            const nombreEsposo = decodeURIComponent(esposo);
-            const nombreEsposa = decodeURIComponent(esposa);
+        const nombreEsposo = decodeURIComponent(esposo);
+        const nombreEsposa = decodeURIComponent(esposa);
 
-            // Muestra: Nombre1 & Nombre2 (El navegador ajustará el salto de línea si es largo)
-            document.getElementById('displayNames').innerHTML = 
-                `${nombreEsposo} <span class="ampersand">&</span> ${nombreEsposa}`;
+        // Mostrar nombres
+        document.getElementById('displayNames').innerHTML = 
+            `${nombreEsposo} <span class="ampersand">&</span> ${nombreEsposa}`;
 
-            const qrData = `BODA: ${nombreEsposo} & ${nombreEsposa} ESTADO: OK`;
+        // Generar QR
+        const qrData = `BODA: ${nombreEsposo} & ${nombreEsposa} ESTADO: OK`;
 
-            new QRCode(document.getElementById("qrcode"), {
-                text: qrData,
-                width: 170,
-                height: 170,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-        } else {
-            document.getElementById('displayNames').style.display = 'none';
-            document.querySelector('.status-badge').style.display = 'none';
-            document.querySelector('.qr-container').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
-        }
+        new QRCode(document.getElementById("qrcode"), {
+            text: qrData,
+            width: 170,
+            height: 170,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
     </script>
 
 </body>
