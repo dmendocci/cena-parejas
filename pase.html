@@ -3,158 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pase de Entrada - Love Night</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Pase de Entrada - Amor que Permanece</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Roboto:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        /* Reset y configuración base */
-        body, html { margin: 0; padding: 0; height: 100%; }
-        body {
-            font-family: 'Roboto', sans-serif;
-            /* Fondo rojo intenso con una textura sutil superpuesta */
-            background-color: #b71c1c; 
-            background-image: url('https://www.transparenttextures.com/patterns/black-paper.png'); 
+        /* CONFIGURACIÓN DEL FONDO ROJO */
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background-color: #b71c1c; /* Rojo Profundo */
+            background-image: url('https://www.transparenttextures.com/patterns/black-paper.png');
             background-blend-mode: multiply;
+            font-family: 'Roboto', sans-serif;
             color: white;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
+            align-items: center;
+        }
+
+        /* TICKET VERTICAL */
+        .pass-card {
+            width: 100%;
+            max-width: 380px; 
+            padding: 30px 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             text-align: center;
         }
 
-        /* Contenedor principal vertical (estilo teléfono) */
-        .pass-container {
-            width: 90%;
-            max-width: 400px; /* Ancho máximo para que no se vea gigante en PC */
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-sizing: border-box;
-        }
-
-        /* Ícono del Nudo (SVG Blanco) */
+        /* 1. ÍCONO LAZO */
         .knot-icon {
-            width: 100px; /* Tamaño del nudo */
+            width: 90px;
             height: auto;
-            margin-bottom: 15px;
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+            margin-bottom: 10px;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
         }
 
-        /* Títulos en Cursiva */
-        .script-text {
+        /* 2. TEXTOS SUPERIORES */
+        .cursive-title {
             font-family: 'Great Vibes', cursive;
             font-weight: 400;
-            line-height: 1.2;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5); /* Sombra para resaltar del fondo */
+            line-height: 1.1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
-        .title-main { font-size: 2.8rem; margin: 0; }
-        .title-sub { font-size: 2.2rem; margin-top: 0px; margin-bottom: 25px; }
+        .main-title { font-size: 2.5rem; margin-top: 5px; }
+        .sub-title { font-size: 2rem; margin-bottom: 20px; color: #ffebd7; }
 
-        /* Emblema Verde */
-        .badge {
-            background-color: #d4edda; /* Fondo verde claro */
-            color: #155724; /* Texto verde oscuro */
-            padding: 10px 25px;
+        /* 3. BOTÓN VERDE */
+        .status-badge {
+            background-color: #dcedc8; 
+            color: #2e7d32; 
+            padding: 8px 20px;
             border-radius: 50px;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
             display: inline-flex;
             align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            margin-bottom: 30px;
+            gap: 6px;
         }
-        .badge span { margin-left: 8px; }
 
-        /* Nombres de la Pareja (Muy grandes y cursivos) */
+        /* 4. NOMBRES */
         .couple-names {
             font-family: 'Great Vibes', cursive;
-            font-size: 3rem; /* Tamaño grande para nombres largos */
-            line-height: 1.1;
-            margin-bottom: 35px;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.6);
-            word-wrap: break-word; /* Asegura que los nombres largos no rompan el diseño */
-            max-width: 100%;
+            font-size: 2.6rem; 
+            line-height: 1.2;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+            width: 100%;
+        }
+        .ampersand {
+            font-size: 1.8rem;
+            opacity: 0.8;
+            display: block; 
+            margin: 5px 0;
         }
 
-        /* Contenedor blanco del QR */
-        .qr-box {
+        /* 5. CÓDIGO QR */
+        .qr-container {
             background: white;
             padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
-            margin-bottom: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            margin-bottom: 25px;
             display: inline-block;
         }
 
-        /* Pie de página (Texto en negrita) */
-        .footer-text {
-            font-size: 1.1rem;
-            font-weight: 700; /* Roboto Bold */
-            line-height: 1.4;
+        /* 6. PIE DE PÁGINA */
+        .footer {
+            font-size: 0.95rem;
+            line-height: 1.5;
             opacity: 0.95;
         }
+        .bold-text { font-weight: 700; color: #fff; }
+
+        .error-msg { color: #ffcccc; font-size: 1.2rem; display: none; margin-top: 20px;}
     </style>
 </head>
 <body>
 
-    <div class="pass-container">
-        <svg class="knot-icon" viewBox="0 0 100 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8.33333 25C8.33333 25 15.3333 18 22.3333 18C29.3333 18 36.3333 25 36.3333 25C36.3333 25 43.3333 18 50.3333 18C57.3333 18 64.3333 25 64.3333 25C64.3333 25 71.3333 18 78.3333 18C85.3333 18 92.3333 25 92.3333 25" stroke="white" stroke-width="3" stroke-linecap="round"/>
-            <path d="M8.33333 15C8.33333 15 15.3333 22 22.3333 22C29.3333 22 36.3333 15 36.3333 15C36.3333 15 43.3333 22 50.3333 22C57.3333 22 64.3333 15 64.3333 15C64.3333 15 71.3333 22 78.3333 22C85.3333 22 92.3333 15 92.3333 15" stroke="white" stroke-width="3" stroke-linecap="round"/>
-            <path d="M36 20C36 13 42 8 50 8C58 8 64 13 64 20" stroke="white" stroke-width="3" stroke-linecap="round"/>
-            <path d="M43 25C43 32 46 35 50 35C54 35 57 32 57 25" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <div class="pass-card">
+        <svg class="knot-icon" viewBox="0 0 100 40" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 20 Q 30 5, 50 20 T 90 20" opacity="0.5"/>
+            <path d="M20 20 C 30 35, 40 35, 50 20 C 60 5, 70 5, 80 20"/>
+            <circle cx="50" cy="20" r="5"/>
         </svg>
 
-        <div class="script-text title-main">Cena Romántica</div>
-        <div class="script-text title-sub">“Amor que Permanece”</div>
+        <div class="cursive-title main-title">Cena Romántica</div>
+        <div class="cursive-title sub-title">"Amor que Permanece"</div>
 
-        <div class="badge">
-            ✅ <span>ACCESO CONFIRMADO</span>
+        <div class="status-badge">
+            <span>✔ ACCESO CONFIRMADO</span>
         </div>
 
-        <div class="couple-names" id="nombresPareja">
-            Cargando nombres...
+        <div class="couple-names" id="displayNames">
+            Cargando...
         </div>
 
-        <div class="qr-box">
+        <div class="qr-container">
             <div id="qrcode"></div>
         </div>
 
-        <div class="footer-text">
+        <div class="footer">
             Presenta este código al llegar.<br>
-            Válido para un único ingreso.
+            <span class="bold-text">Válido para un único ingreso.</span>
         </div>
+        
+        <div id="error" class="error-msg">⚠ Enlace incompleto</div>
     </div>
 
     <script>
-        // --- LÓGICA JAVASCRIPT ---
-
-        // 1. Obtener los parámetros de la URL (ej: ?esposo=Juan&esposa=Maria)
         const params = new URLSearchParams(window.location.search);
-        
-        // 2. Extraer los nombres, si no hay, usar "Invitado" por defecto
-        // DecodeURIComponent asegura que los espacios y acentos se vean bien
-        const esposo = decodeURIComponent(params.get('esposo') || "Invitado");
-        const esposa = decodeURIComponent(params.get('esposa') || "Invitada");
+        const esposo = params.get('esposo');
+        const esposa = params.get('esposa');
 
-        // 3. Insertar los nombres en el HTML
-        document.getElementById('nombresPareja').innerHTML = `${esposo} <br>&<br> ${esposa}`;
+        if (esposo && esposa) {
+            const nombreEsposo = decodeURIComponent(esposo);
+            const nombreEsposa = decodeURIComponent(esposa);
 
-        // 4. Generar el texto que contendrá el QR
-        // Usamos el mismo formato que el scanner espera leer
-        const qrText = `BODA: ${esposo} & ${esposa} ESTADO: OK`;
+            document.getElementById('displayNames').innerHTML = 
+                `${nombreEsposo} <span class="ampersand">&</span> ${nombreEsposa}`;
 
-        // 5. Generar el código QR visualmente
-        new QRCode(document.getElementById("qrcode"), {
-            text: qrText,
-            width: 180,  // Tamaño del QR
-            height: 180,
-            colorDark : "#000000", // Color de los puntos (negro)
-            colorLight : "#ffffff", // Color del fondo del QR (blanco)
-            correctLevel : QRCode.CorrectLevel.H // Alto nivel de corrección de errores
-        });
+            const qrData = `BODA: ${nombreEsposo} & ${nombreEsposa} ESTADO: OK`;
+
+            new QRCode(document.getElementById("qrcode"), {
+                text: qrData,
+                width: 160,
+                height: 160,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        } else {
+            document.getElementById('displayNames').style.display = 'none';
+            document.querySelector('.status-badge').style.display = 'none';
+            document.querySelector('.qr-container').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
     </script>
 
 </body>
