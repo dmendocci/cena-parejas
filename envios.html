@@ -16,7 +16,7 @@
         .inp-search { flex: 1; padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
         .btn-search { padding: 15px 20px; background: #2c3e50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
-        /* Botón Pendientes */
+        /* Botones Generales */
         .btn-load { width: 100%; padding: 15px; background: #741b47; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
         .btn-load:hover { background: #5c1538; }
 
@@ -58,7 +58,7 @@
     <button class="btn-load" onclick="cargarPendientes()">🔄 Ver Solo Pendientes Nuevos</button>
 
     <div class="search-box">
-        <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar nombre para reenviar..." onkeypress="handleEnter(event)">
+        <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar nombre..." onkeypress="handleEnter(event)">
         <button class="btn-search" onclick="buscarPersona()">🔍 Buscar</button>
     </div>
 
@@ -66,12 +66,11 @@
 </div>
 
 <script>
-    // ⬇️ PEGA AQUÍ TU URL NUEVA (La que termina en /exec) ⬇️
-    const API_URL = "https://script.google.com/macros/s/AKfycbyqplGmpQWsyk2diCIuQK0_VqP-GMrHYV0mvvtD6C1lRQvkP_n2bzNvzB3TOAoBbhOK/exec";
-    // ⬆️ -------------------------------------------------- ⬆️
+    // ⚠️ REVISA QUE ESTA URL SEA LA NUEVA (V14) ⚠️
+    const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
 
     function cargarPendientes() {
-        document.getElementById('txtBuscar').value = ""; // Limpiar busqueda
+        document.getElementById('txtBuscar').value = ""; 
         buscarAPI("listar_envios", {});
     }
 
@@ -125,13 +124,13 @@
             card.className = claseCard;
             card.id = `card-${item.fila}`;
             
-            const msg = `¡Hola! Su pago ha sido procesado ✅.\n\nAquí tienen su pase de acceso (QR):\n${item.link}\n\n¡Nos vemos en Love Night!`;
+            // --- AQUI ESTÁ EL CAMBIO DE TEXTO QUE PEDISTE ---
+            const msg = `¡Hola! Su registro a la cena romantica: "Amor que prevalece" se ha procesado satisfactoriamente.\n\nPara encontrar su codigo QR:\n${item.link}\n\n¡Los esperamos!`;
             const encMsg = encodeURIComponent(msg);
             
             let t1 = limpiarTel(item.tel1);
             let t2 = limpiarTel(item.tel2);
             
-            // Botones
             let btnMan = t1 
                 ? `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" class="btn-wa wa-man" onclick="marcarEnviado(this)"><span>📲 Esposo</span><small>${item.esposo.split(' ')[0]}</small></a>`
                 : `<div class="btn-wa no-phone">🚫 Sin Tel<br><small>Esposo</small></div>`;
@@ -140,7 +139,6 @@
                 ? `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" class="btn-wa wa-woman" onclick="marcarEnviado(this)"><span>📲 Esposa</span><small>${item.esposa.split(' ')[0]}</small></a>`
                 : `<div class="btn-wa no-phone">🚫 Sin Tel<br><small>Esposa</small></div>`;
 
-            // El botón verde solo sale si NO está pagado aún
             let btnFinalizar = esPagado 
                 ? `<div style="text-align:center; color:#27ae60; font-weight:bold; margin-top:10px;">✅ QR ya generado</div>`
                 : `<button class="btn-done" onclick="marcarPagado(${item.fila}, '${item.link}', this)">✅ Finalizar (Marcar Pagado)</button>`;
