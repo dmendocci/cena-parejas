@@ -3,24 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Despacho y Reenvío QRs</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; padding: 20px; color: #333; }
         .container { max-width: 600px; margin: 0 auto; }
-        
         h1 { color: #2c3e50; text-align: center; font-size: 1.5rem; margin-bottom: 20px; }
         
-        /* BARRA DE BÚSQUEDA */
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         .inp-search { flex: 1; padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
         .btn-search { padding: 15px 20px; background: #2c3e50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
-        /* Botones Generales */
         .btn-load { width: 100%; padding: 15px; background: #741b47; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
         .btn-load:hover { background: #5c1538; }
 
-        /* Tarjeta */
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #d4af37; animation: fadeIn 0.3s; position: relative; }
         .card.pagado { border-left-color: #27ae60; background: #f9fff9; }
         
@@ -37,7 +32,6 @@
         .wa-woman { background: #8e44ad; }
         .wa-man:hover { background: #21618c; }
         .wa-woman:hover { background: #71368a; }
-
         .btn-wa.enviado { background: #4a4a4a; border: 1px solid #333; }
         .no-phone { background: #95a5a6; cursor: not-allowed; opacity: 0.6; pointer-events: none; }
         
@@ -55,7 +49,7 @@
 <div class="container">
     <h1>📤 Envío de Pases</h1>
     
-    <button class="btn-load" onclick="cargarPendientes()">🔄 Ver Solo Pendientes Nuevos</button>
+    <button class="btn-load" onclick="cargarPendientes()">🔄 Forzar Sincronización y Recarga</button>
 
     <div class="search-box">
         <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar nombre..." onkeypress="handleEnter(event)">
@@ -66,8 +60,14 @@
 </div>
 
 <script>
-    // ⚠️ REVISA QUE ESTA URL SEA LA NUEVA (V14) ⚠️
-    const API_URL = "https://script.google.com/macros/s/AKfycbxOMGhRpNPvuhHcsXTZnrMrNoLRqMQYzWhRA3MZUjUYznxKTYvDb94MG2i6-acQdivS/exec";
+    // ✅ TU URL NUEVA:
+    const API_URL = "https://script.google.com/macros/s/AKfycbz-erGjGqH4CGGz7E8CY3GmCsBjsms0bkHSx169VYfvMsHle0vrSvcL8ik6DDE_HhgO5w/exec";
+
+    // 🚀 ESTO SE EJECUTA AL ABRIR LA PÁGINA
+    window.onload = function() {
+        console.log("Iniciando carga automática...");
+        cargarPendientes();
+    };
 
     function cargarPendientes() {
         document.getElementById('txtBuscar').value = ""; 
@@ -86,7 +86,13 @@
 
     function buscarAPI(accion, params) {
         const cont = document.getElementById('listaResultados');
-        cont.innerHTML = '<div class="loading">⏳ Consultando...</div>';
+        
+        // Mensaje diferente si es carga inicial (que incluye sync)
+        if(accion === "listar_envios") {
+            cont.innerHTML = '<div class="loading">⚙️ <b>Sincronizando con Tabla Maestra...</b><br>Leyendo nuevos registros... esto puede tardar unos segundos.</div>';
+        } else {
+            cont.innerHTML = '<div class="loading">⏳ Consultando...</div>';
+        }
 
         const url = new URL(API_URL);
         url.searchParams.append("accion", accion);
@@ -109,7 +115,7 @@
         cont.innerHTML = "";
 
         if(lista.length === 0) {
-            cont.innerHTML = `<div class="empty">🤷‍♂️ No se encontraron registros.</div>`;
+            cont.innerHTML = `<div class="empty">✨ Todo al día. No hay nuevos pagos pendientes.</div>`;
             return;
         }
 
@@ -118,13 +124,12 @@
             const claseCard = esPagado ? "card pagado" : "card";
             const badge = esPagado 
                 ? `<div class="badge badge-pagado">✔ PAGADO</div>` 
-                : `<div class="badge badge-pendiente">⏳ PENDIENTE</div>`;
+                : `<div class="badge badge-pendiente">⏳ PENDIENTE DE ENVÍO</div>`;
 
             const card = document.createElement('div');
             card.className = claseCard;
             card.id = `card-${item.fila}`;
             
-            // --- AQUI ESTÁ EL CAMBIO DE TEXTO QUE PEDISTE ---
             const msg = `¡Hola! Su registro a la cena romantica: "Amor que prevalece" se ha procesado satisfactoriamente.\n\nPara encontrar su codigo QR:\n${item.link}\n\n¡Los esperamos!`;
             const encMsg = encodeURIComponent(msg);
             
