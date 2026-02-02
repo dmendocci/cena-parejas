@@ -3,74 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Despacho y Reenvío QRs</title>
+    <title>Despacho QRs - Matriz</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; }
-        h1 { color: #2c3e50; text-align: center; font-size: 1.5rem; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f6f7; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; } /* Más ancho para la tabla */
         
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+
+        /* BUSCADOR */
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
-        .inp-search { flex: 1; padding: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
-        .btn-search { padding: 15px 20px; background: #2c3e50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        
-        .btn-load { width: 100%; padding: 15px; background: #741b47; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
+        .inp-search { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
+        .btn-search { padding: 12px 20px; background: #2c3e50; color: white; border: none; border-radius: 6px; cursor: pointer; }
+
+        .btn-load { width: 100%; padding: 12px; background: #741b47; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
         .btn-load:hover { background: #5c1538; }
 
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid #d4af37; animation: fadeIn 0.3s; position: relative; }
-        .card.pagado { border-left-color: #27ae60; background: #f9fff9; }
-        
-        .badge { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-weight: bold; }
-        .badge-pendiente { background: #ffeeba; color: #856404; }
-        .badge-pagado { background: #d4edda; color: #155724; }
+        /* --- ESTILOS DE LA MATRIZ (TABLA) --- */
+        .tabla-matriz { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .tabla-matriz th { background: #34495e; color: white; padding: 15px; text-align: left; font-weight: 600; }
+        .tabla-matriz td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        .tabla-matriz tr:last-child td { border-bottom: none; }
+        .tabla-matriz tr:hover { background-color: #f9f9f9; }
 
-        .names { font-size: 1.2rem; font-weight: bold; color: #741b47; margin-bottom: 15px; text-align: center; }
+        .col-nombres { width: 40%; font-size: 1.1rem; color: #741b47; font-weight: bold; }
+        .col-btn { width: 30%; text-align: center; }
+
+        /* --- BOTONES DE ENVÍO --- */
+        .btn-send {
+            display: inline-block;
+            width: 90%;
+            padding: 10px 5px;
+            background-color: #27ae60; /* VERDE */
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            text-align: center;
+            border: 1px solid transparent;
+        }
+        .btn-send:hover { background-color: #219150; transform: translateY(-1px); }
+
+        /* ESTADO: ENVIADO (GRIS) */
+        .btn-send.enviado {
+            background-color: #bdc3c7; /* GRIS CLARO */
+            color: #7f8c8d;
+            border: 1px solid #bdc3c7;
+            cursor: default;
+            pointer-events: none; /* Ya no se puede clicar */
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
         
-        .wa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        
-        .btn-wa { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; font-size: 0.9rem; text-align: center; min-height: 70px; transition: 0.3s; border: 1px solid transparent; }
-        .wa-man { background: #2980b9; }
-        .wa-woman { background: #8e44ad; }
-        .wa-man:hover { background: #21618c; }
-        .wa-woman:hover { background: #71368a; }
-        .btn-wa.enviado { background: #4a4a4a; border: 1px solid #333; }
-        .no-phone { background: #95a5a6; cursor: not-allowed; opacity: 0.6; pointer-events: none; }
-        
-        .btn-done { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; }
-        
-        .timestamp { font-size: 0.75rem; color: #f1c40f; margin-top: 5px; font-weight: normal; }
-        .loading { text-align: center; color: #777; font-style: italic; }
+        /* ESTADO: SIN TELÉFONO */
+        .no-phone {
+            background-color: #ecf0f1;
+            color: #bdc3c7;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .check-icon { font-size: 1.1em; margin-right: 5px; }
+        .loading { text-align: center; padding: 20px; font-style: italic; color: #777; }
         .empty { text-align: center; padding: 30px; color: #aaa; background: white; border-radius: 8px; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Animación para cuando desaparece la fila */
+        .fade-out { opacity: 0; transition: opacity 0.5s ease-out; }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📤 Envío de Pases</h1>
+    <h1>📋 Matriz de Envíos QR</h1>
     
-    <button class="btn-load" onclick="cargarPendientes()">🔄 Forzar Sincronización y Recarga</button>
+    <button class="btn-load" onclick="cargarPendientes()">🔄 Sincronizar y Ver Pendientes</button>
 
     <div class="search-box">
-        <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar nombre..." onkeypress="handleEnter(event)">
+        <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar pareja..." onkeypress="handleEnter(event)">
         <button class="btn-search" onclick="buscarPersona()">🔍 Buscar</button>
     </div>
 
-    <div id="listaResultados"></div>
+    <div id="contenedorTabla"></div>
 </div>
 
 <script>
-    // ✅ TU URL NUEVA:
+    // ⚠️ PEGA AQUÍ TU URL NUEVA DE APPS SCRIPT
     const API_URL = "https://script.google.com/macros/s/AKfycbz-erGjGqH4CGGz7E8CY3GmCsBjsms0bkHSx169VYfvMsHle0vrSvcL8ik6DDE_HhgO5w/exec";
 
-    // 🚀 ESTO SE EJECUTA AL ABRIR LA PÁGINA
-    window.onload = function() {
-        console.log("Iniciando carga automática...");
-        cargarPendientes();
-    };
+    window.onload = function() { cargarPendientes(); };
 
     function cargarPendientes() {
-        document.getElementById('txtBuscar').value = ""; 
+        document.getElementById('txtBuscar').value = "";
         buscarAPI("listar_envios", {});
     }
 
@@ -80,19 +104,12 @@
         buscarAPI("buscar_pareja", { texto: txt });
     }
 
-    function handleEnter(e) {
-        if(e.key === "Enter") buscarPersona();
-    }
+    function handleEnter(e) { if(e.key === "Enter") buscarPersona(); }
 
     function buscarAPI(accion, params) {
-        const cont = document.getElementById('listaResultados');
-        
-        // Mensaje diferente si es carga inicial (que incluye sync)
-        if(accion === "listar_envios") {
-            cont.innerHTML = '<div class="loading">⚙️ <b>Sincronizando con Tabla Maestra...</b><br>Leyendo nuevos registros... esto puede tardar unos segundos.</div>';
-        } else {
-            cont.innerHTML = '<div class="loading">⏳ Consultando...</div>';
-        }
+        const cont = document.getElementById('contenedorTabla');
+        if(accion === "listar_envios") cont.innerHTML = '<div class="loading">⚙️ Sincronizando datos...</div>';
+        else cont.innerHTML = '<div class="loading">⏳ Buscando...</div>';
 
         const url = new URL(API_URL);
         url.searchParams.append("accion", accion);
@@ -102,7 +119,7 @@
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                renderizar(data.message);
+                renderizarTabla(data.message, accion === "buscar_pareja");
             } else {
                 cont.innerHTML = `<div class="empty">❌ Error: ${data.message}</div>`;
             }
@@ -110,83 +127,131 @@
         .catch(e => cont.innerHTML = `<div class="empty">❌ Error de conexión</div>`);
     }
 
-    function renderizar(lista) {
-        const cont = document.getElementById('listaResultados');
+    function renderizarTabla(lista, esBusqueda) {
+        const cont = document.getElementById('contenedorTabla');
         cont.innerHTML = "";
 
         if(lista.length === 0) {
-            cont.innerHTML = `<div class="empty">✨ Todo al día. No hay nuevos pagos pendientes.</div>`;
+            cont.innerHTML = `<div class="empty">✨ Todo listo. No hay pendientes.</div>`;
             return;
         }
 
-        lista.forEach(item => {
-            const esPagado = item.estado === "Pagado";
-            const claseCard = esPagado ? "card pagado" : "card";
-            const badge = esPagado 
-                ? `<div class="badge badge-pagado">✔ PAGADO</div>` 
-                : `<div class="badge badge-pendiente">⏳ PENDIENTE DE ENVÍO</div>`;
+        // Crear Estructura de Tabla
+        let html = `
+        <table class="tabla-matriz">
+            <thead>
+                <tr>
+                    <th>Pareja</th>
+                    <th>Envío Esposo</th>
+                    <th>Envío Esposa</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
 
-            const card = document.createElement('div');
-            card.className = claseCard;
-            card.id = `card-${item.fila}`;
-            
+        lista.forEach(item => {
+            // Preparar mensaje y teléfonos
             const msg = `¡Hola! Su registro a la cena romantica: "Amor que prevalece" se ha procesado satisfactoriamente.\n\nPara encontrar su codigo QR:\n${item.link}\n\n¡Los esperamos!`;
             const encMsg = encodeURIComponent(msg);
-            
             let t1 = limpiarTel(item.tel1);
             let t2 = limpiarTel(item.tel2);
-            
-            let btnMan = t1 
-                ? `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" class="btn-wa wa-man" onclick="marcarEnviado(this)"><span>📲 Esposo</span><small>${item.esposo.split(' ')[0]}</small></a>`
-                : `<div class="btn-wa no-phone">🚫 Sin Tel<br><small>Esposo</small></div>`;
 
-            let btnWoman = t2
-                ? `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" class="btn-wa wa-woman" onclick="marcarEnviado(this)"><span>📲 Esposa</span><small>${item.esposa.split(' ')[0]}</small></a>`
-                : `<div class="btn-wa no-phone">🚫 Sin Tel<br><small>Esposa</small></div>`;
+            // Determinar si ya está todo "Completo" (para búsquedas)
+            const esCompleto = item.yaEnviado === true;
 
-            let btnFinalizar = esPagado 
-                ? `<div style="text-align:center; color:#27ae60; font-weight:bold; margin-top:10px;">✅ QR ya generado</div>`
-                : `<button class="btn-done" onclick="marcarPagado(${item.fila}, '${item.link}', this)">✅ Finalizar (Marcar Pagado)</button>`;
+            // BOTÓN ESPOSO
+            let btnMan = "";
+            if(t1) {
+                // Si es búsqueda y ya estaba enviado, lo mostramos gris. Si no, verde.
+                let claseExtra = esCompleto ? "enviado" : "";
+                let textoBtn = esCompleto ? "✔ Ya Enviado" : "📲 Enviar QR";
+                btnMan = `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" 
+                             class="btn-send ${claseExtra}" 
+                             id="btn-man-${item.fila}"
+                             onclick="registrarEnvio(this, ${item.fila}, 'man')">
+                             ${textoBtn} <br><small>${item.esposo.split(' ')[0]}</small>
+                          </a>`;
+            } else {
+                btnMan = `<div class="btn-send no-phone">🚫 Sin Tel</div>`;
+            }
 
-            card.innerHTML = `
-                ${badge}
-                <div class="names">${item.esposo} & ${item.esposa}</div>
-                <div class="wa-grid">${btnMan}${btnWoman}</div>
-                ${btnFinalizar}
+            // BOTÓN ESPOSA
+            let btnWoman = "";
+            if(t2) {
+                let claseExtra = esCompleto ? "enviado" : "";
+                let textoBtn = esCompleto ? "✔ Ya Enviado" : "📲 Enviar QR";
+                btnWoman = `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" 
+                               class="btn-send ${claseExtra}" 
+                               id="btn-woman-${item.fila}"
+                               onclick="registrarEnvio(this, ${item.fila}, 'woman')">
+                               ${textoBtn} <br><small>${item.esposa.split(' ')[0]}</small>
+                            </a>`;
+            } else {
+                btnWoman = `<div class="btn-send no-phone">🚫 Sin Tel</div>`;
+            }
+
+            html += `
+                <tr id="fila-${item.fila}">
+                    <td class="col-nombres">${item.esposo} <br>&<br> ${item.esposa}</td>
+                    <td class="col-btn">${btnMan}</td>
+                    <td class="col-btn">${btnWoman}</td>
+                </tr>
             `;
-            cont.appendChild(card);
         });
+
+        html += `</tbody></table>`;
+        cont.innerHTML = html;
     }
 
-    function marcarEnviado(btn) {
-        const ahora = new Date();
-        const fecha = ahora.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-        const hora = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    // --- LÓGICA DE ACTUALIZACIÓN AUTOMÁTICA ---
+    function registrarEnvio(btn, fila, quien) {
+        // 1. Cambiar visualmente el botón clickeado
+        if(btn.classList.contains('enviado')) return; // Evitar doble clic
+        
         btn.classList.add('enviado');
-        if(!btn.innerHTML.includes("Enviado")) { 
-            btn.innerHTML += `<div class="timestamp">✔ Reenviado ${fecha} ${hora}</div>`;
+        // Mantener el nombre abajo, cambiar solo el texto de arriba
+        const nombre = btn.querySelector('small').innerText;
+        btn.innerHTML = `✔ Enviado<br><small>${nombre}</small>`;
+
+        // 2. Verificar estado del OTRO botón
+        const idOtro = (quien === 'man') ? `btn-woman-${fila}` : `btn-man-${fila}`;
+        const btnOtro = document.getElementById(idOtro);
+
+        // CONDICIONES PARA COMPLETAR:
+        // A. El otro botón ya está enviado (tiene clase 'enviado')
+        // B. O el otro botón NO existe (porque no tenía teléfono, es clase 'no-phone')
+        let otroListo = false;
+        
+        if (!btnOtro) {
+            // Caso raro, pero asumimos listo si no hay botón
+            otroListo = true; 
+        } else if (btnOtro.classList.contains('enviado') || btnOtro.classList.contains('no-phone')) {
+            otroListo = true;
+        }
+
+        // 3. Si AMBOS están listos, avisar al Backend
+        if (otroListo) {
+            console.log(`Fila ${fila} completa. Guardando en BD...`);
+            guardarEnBackend(fila);
         }
     }
 
-    function marcarPagado(fila, link, btn) {
-        if(!confirm("¿Marcar como COMPLETADO?")) return;
-        btn.disabled = true; btn.innerText = "⏳ Guardando..."; btn.style.backgroundColor = "#999";
-        
+    function guardarEnBackend(fila) {
         const form = new URLSearchParams();
-        form.append('accion', 'marcar_enviado');
+        form.append('accion', 'marcar_completo');
         form.append('fila', fila);
-        form.append('link', link);
 
         fetch(API_URL, { method: 'POST', body: form })
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                const card = document.getElementById(`card-${fila}`);
-                card.style.opacity = '0';
-                setTimeout(() => card.remove(), 300);
-            } else {
-                alert("Error: " + data.message);
-                btn.disabled = false;
+                // Opcional: Desvanecer la fila porque ya terminamos con ella
+                const tr = document.getElementById(`fila-${fila}`);
+                // Si estamos en "Pendientes" (no búsqueda), la quitamos
+                if(!document.getElementById('txtBuscar').value) {
+                    tr.classList.add('fade-out');
+                    setTimeout(() => tr.remove(), 600);
+                }
             }
         });
     }
