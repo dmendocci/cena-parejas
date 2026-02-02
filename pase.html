@@ -2,12 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <title>Pase de Entrada - Amor que Permanece</title>
+    <title>Pase de Entrada</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
@@ -15,104 +15,109 @@
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: #b71c1c; /* Color de respaldo */
+            background-color: #b71c1c;
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden; /* Evita scroll */
         }
 
-        /* CONTENEDOR DE LA PLANTILLA */
+        /* CONTENEDOR PRINCIPAL (LA PLANTILLA) */
         .pass-container {
             position: relative;
             width: 100%;
-            max-width: 450px; /* Ancho máximo de celular */
-            aspect-ratio: 9 / 16; /* Mantiene la proporción de la imagen siempre */
+            /* Mantiene la proporción exacta de la imagen aprobada */
+            aspect-ratio: 9 / 16; 
             max-height: 100vh;
+            max-width: 500px; /* Limitamos el ancho en pantallas grandes */
             
             margin: 0 auto;
             
-            /* CARGA LA IMAGEN QUE ACABAMOS DE GENERAR */
+            /* IMPORTANTE: Asegúrate de que 'fondo_pase.png' sea la imagen aprobada (la que tiene los huecos vacíos) */
             background-image: url('fondo_pase.png'); 
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* Sombra para darle profundidad */
         }
 
-        /* POSICIÓN DE LOS NOMBRES (Dinámico) */
+        /* POSICIÓN DE LOS NOMBRES (Recalibrado) */
         .names-overlay {
             position: absolute;
-            /* Coordenada vertical: Ajustada para caer bajo el botón verde */
-            top: 41%; 
+            /* Coloca el inicio del texto al 37% de la altura */
+            top: 37%; 
             left: 50%;
-            transform: translate(-50%, -0%); /* Centrado horizontal */
+            transform: translate(-50%, 0); /* Centrado horizontal */
             
-            width: 90%;
+            width: 92%;
             text-align: center;
             
-            /* Tipografía igual a la imagen */
-            font-family: 'Great Vibes', cursive; 
-            font-size: 2.8rem; /* Tamaño grande y legible */
+            font-family: 'Great Vibes', cursive;
+            /* Tamaño ajustado para manejar nombres largos sin chocar */
+            font-size: 2.4rem; 
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
             line-height: 1.1;
-            font-weight: normal; /* Quitamos bold como pediste */
+            font-weight: normal;
+            z-index: 2;
         }
 
-        /* POSICIÓN DEL QR (Dinámico) */
+        /* POSICIÓN DEL QR (Recalibrado) */
         .qr-overlay {
             position: absolute;
-            /* Coordenada vertical: Ajustada al espacio vacío de abajo */
+            /* Coloca el centro del QR al 66% de la altura */
             top: 66%;  
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%); /* Centrado perfecto */
             
-            /* Fondo blanco para que el QR lea bien */
+            /* Estilo de la caja blanca del QR */
             background-color: white;
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            z-index: 2;
+        }
+        
+        /* Ajuste del tamaño del QR generado */
+        #qrcode img {
+            width: 160px !important;
+            height: 160px !important;
+            display: block;
         }
 
-        /* Ajustes para pantallas muy anchas */
-        @media (max-aspect-ratio: 9/16) {
-            .pass-container {
-                width: auto;
-                height: 100%;
-            }
-        }
     </style>
 </head>
 <body>
 
     <div class="pass-container">
-        <div class="names-overlay" id="displayNames">
-            Cargando...
-        </div>
+        <div class="names-overlay" id="displayNames"></div>
 
         <div class="qr-overlay" id="qrcode"></div>
     </div>
 
     <script>
+        // Obtenemos parámetros de la URL
         const params = new URLSearchParams(window.location.search);
         
-        // Datos por defecto para prueba
-        const esposo = params.get('esposo') || "Invitado Especial";
-        const esposa = params.get('esposa') || "Invitada Especial";
+        // Datos de prueba si no hay parámetros
+        const esposoEncoded = params.get('esposo') || "Carlos Sanchez";
+        const esposaEncoded = params.get('esposa') || "Suyapa Lopez";
 
-        const nombreEsposo = decodeURIComponent(esposo);
-        const nombreEsposa = decodeURIComponent(esposa);
+        // Decodificamos los nombres para mostrar acentos correctamente
+        const nombreEsposo = decodeURIComponent(esposoEncoded);
+        const nombreEsposa = decodeURIComponent(nombreEsposaEncoded);
 
-        // Inyectamos los nombres con el "&" estilizado
+        // Insertamos los nombres con el salto de línea
         document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
-        // Generamos el QR
+        // Generamos el QR con los datos
         new QRCode(document.getElementById("qrcode"), {
             text: `REGISTRO: ${nombreEsposo} & ${nombreEsposa}`,
-            width: 170,  
-            height: 170,
+            width: 160,  
+            height: 160,
             colorDark : "#000000",
             colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+            correctLevel : QRCode.CorrectLevel.M
         });
     </script>
 
