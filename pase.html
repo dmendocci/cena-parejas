@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
     <title>Pase de Entrada</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -19,70 +16,59 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; /* Evita scroll */
+            overflow: hidden; 
         }
 
-        /* CONTENEDOR PRINCIPAL (LA PLANTILLA) */
         .pass-container {
             position: relative;
             width: 100%;
-            /* Mantiene la proporción exacta de la imagen aprobada */
+            max-width: 450px; 
+            /* Esta proporción (aspect-ratio) es vital para que no se mueva nada */
             aspect-ratio: 9 / 16; 
             max-height: 100vh;
-            max-width: 500px; /* Limitamos el ancho en pantallas grandes */
-            
             margin: 0 auto;
             
-            /* IMPORTANTE: Asegúrate de que 'fondo_pase.png' sea la imagen aprobada (la que tiene los huecos vacíos) */
+            /* USA LA IMAGEN QUE TIENE EL CUADRO BLANCO VACÍO */
             background-image: url('fondo_pase.png'); 
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* Sombra para darle profundidad */
         }
 
-        /* POSICIÓN DE LOS NOMBRES (Recalibrado) */
+        /* 1. NOMBRES: Calibrados para el hueco entre botón y cuadro blanco */
         .names-overlay {
             position: absolute;
-            /* Coloca el inicio del texto al 37% de la altura */
-            top: 37%; 
+            top: 37%;  /* <--- COORDENADA CLAVE */
             left: 50%;
-            transform: translate(-50%, 0); /* Centrado horizontal */
-            
-            width: 92%;
+            transform: translate(-50%, 0);
+            width: 90%;
             text-align: center;
             
             font-family: 'Great Vibes', cursive;
-            /* Tamaño ajustado para manejar nombres largos sin chocar */
-            font-size: 2.4rem; 
+            font-size: 2.2rem; /* Tamaño ajustado */
             color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.8); /* Sombra fuerte para legibilidad */
             line-height: 1.1;
-            font-weight: normal;
-            z-index: 2;
+            font-weight: normal; 
+            z-index: 10;
         }
 
-        /* POSICIÓN DEL QR (Recalibrado) */
+        /* 2. QR: Calibrado para caer DENTRO del cuadro blanco de la imagen */
         .qr-overlay {
             position: absolute;
-            /* Coloca el centro del QR al 66% de la altura */
-            top: 66%;  
+            top: 64.5%; /* <--- COORDENADA CLAVE (Centro del cuadro blanco) */
             left: 50%;
-            transform: translate(-50%, -50%); /* Centrado perfecto */
+            transform: translate(-50%, -50%);
+            z-index: 10;
             
-            /* Estilo de la caja blanca del QR */
-            background-color: white;
-            padding: 12px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-            z-index: 2;
+            /* Quitamos padding y fondo porque la imagen YA TIENE el cuadro blanco */
+            background: transparent; 
         }
         
-        /* Ajuste del tamaño del QR generado */
+        /* Ajuste fino del tamaño del QR para que no se salga del cuadro */
         #qrcode img {
-            width: 160px !important;
-            height: 160px !important;
             display: block;
+            margin: 0 auto;
         }
 
     </style>
@@ -91,33 +77,29 @@
 
     <div class="pass-container">
         <div class="names-overlay" id="displayNames"></div>
-
         <div class="qr-overlay" id="qrcode"></div>
     </div>
 
     <script>
-        // Obtenemos parámetros de la URL
         const params = new URLSearchParams(window.location.search);
         
-        // Datos de prueba si no hay parámetros
-        const esposoEncoded = params.get('esposo') || "Carlos Sanchez";
-        const esposaEncoded = params.get('esposa') || "Suyapa Lopez";
+        // Datos de prueba para calibrar
+        const esposo = params.get('esposo') || "Carlos Sanchez";
+        const esposa = params.get('esposa') || "Suyapa Lopez";
 
-        // Decodificamos los nombres para mostrar acentos correctamente
-        const nombreEsposo = decodeURIComponent(esposoEncoded);
-        const nombreEsposa = decodeURIComponent(nombreEsposaEncoded);
+        const nombreEsposo = decodeURIComponent(esposo);
+        const nombreEsposa = decodeURIComponent(esposa);
 
-        // Insertamos los nombres con el salto de línea
         document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
-        // Generamos el QR con los datos
+        // Generamos el QR un poco más pequeño para asegurar que entre en el cuadro
         new QRCode(document.getElementById("qrcode"), {
             text: `REGISTRO: ${nombreEsposo} & ${nombreEsposa}`,
-            width: 160,  
-            height: 160,
+            width: 190,  // Tamaño ajustado al cuadro blanco de la imagen
+            height: 190,
             colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.M
+            colorLight : "#ffffff", // Fondo blanco por seguridad
+            correctLevel : QRCode.CorrectLevel.H
         });
     </script>
 
