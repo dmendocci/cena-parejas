@@ -250,4 +250,60 @@
             if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
             
             // Mensaje personalizado
-            let mensaje = `¡Hola ${nombre}! 👋\n\nNos alegra confirmar tu asistencia a la cena "Am
+            let mensaje = `¡Hola ${nombre}! 👋\n\nNos alegra confirmar tu asistencia a la cena "Amor que Permanece". 🌹\n\nAquí tienes tu PASE DE ENTRADA PERSONAL:\n${urlQR}\n\nPor favor preséntalo en la entrada para tu ingreso. ¡Te esperamos! ✨`;
+            let urlWA = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+            
+            window.open(urlWA, '_blank');
+            
+            // Registrar en la hoja (Columna K)
+            fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=qr&fila=${fila}&destinatario=${destinatario}`, { method: 'POST' })
+                .then(() => { 
+                    // Pequeña espera para que Google Sheets procese
+                    setTimeout(cargarDatos, 1500); 
+                });
+        }
+
+        // --- ENVIAR RECORDATORIO ---
+        function enviarRecordatorio(fila, telefono, nombre, intentosPrevios) {
+            if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
+            if(intentosPrevios >= 5) { alert("🛑 Has alcanzado el límite de 5 recordatorios automáticos. Se recomienda una llamada personal."); return; }
+
+            // Estrategia de Mensajes Escalables
+            const mensajes = [
+                `Hola ${nombre}, un gusto saludarte. 👋 Te recordamos completar tu inscripción para la cena enviando el comprobante. ¡Quedan pocos cupos!`, 
+                `Hola ${nombre}, solo pasaba a recordarte que esperamos tu comprobante para asegurar tu mesa en la cena "Amor que Permanece". 🍷 ¡No te quedes fuera!`,
+                `Hola ${nombre}, notamos que aún no tenemos tu comprobante. La fecha se acerca, ¿necesitas ayuda con el pago? Quedamos atentos.`,
+                `Estimado/a ${nombre}, por favor confirma tu asistencia enviando el comprobante hoy para no liberar tu reserva. 🙏`,
+                `⚠️ ÚLTIMO AVISO ${nombre}: Necesitamos tu confirmación urgente para la cena. Por favor avísanos hoy.`
+            ];
+
+            let texto = mensajes[intentosPrevios] || mensajes[4];
+            let urlWA = `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`;
+            
+            window.open(urlWA, '_blank');
+
+            // Registrar en la hoja (Columna L incrementa)
+            fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, { method: 'POST' })
+                .then(() => { 
+                    setTimeout(cargarDatos, 1500);
+                });
+        }
+
+        function filtrarTabla() {
+            const texto = document.getElementById("searchInput").value.toLowerCase();
+            const filtrados = datosGlobales.filter(item => 
+                (item.esposo && item.esposo.toLowerCase().includes(texto)) || 
+                (item.esposa && item.esposa.toLowerCase().includes(texto))
+            );
+            renderizarTabla(filtrados);
+        }
+
+        function mostrarLoader(show) {
+            document.getElementById("loader").classList.toggle("hidden", !show);
+        }
+
+        // Iniciar carga
+        window.onload = cargarDatos;
+    </script>
+</body>
+</html>
