@@ -16,7 +16,6 @@
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
-        // Tu URL de Apps Script
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec"; 
     </script>
 
@@ -40,7 +39,7 @@
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <i class="fas fa-search text-gray-400"></i>
                 </span>
-                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar por nombre de esposo o esposa..." 
+                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar por nombre..." 
                        class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none transition">
             </div>
         </div>
@@ -67,27 +66,31 @@
 
         <div id="loader" class="fixed top-0 left-0 w-full h-full bg-white bg-opacity-90 flex flex-col justify-center items-center z-50 hidden backdrop-filter backdrop-blur-sm">
             <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
-            <h2 class="text-xl font-semibold text-gray-700">Conectando con la Hoja...</h2>
-            <p class="text-gray-500 text-sm">Validando pagos y generando enlaces</p>
+            <h2 class="text-xl font-semibold text-gray-700">Conectando...</h2>
         </div>
     </div>
 
     <script>
         let datosGlobales = [];
 
-        // --- FUNCIÓN INTELIGENTE PARA WHATSAPP ---
+        // --- FUNCIÓN INTELIGENTE CON CORRECCIÓN DE PAÍS (HONDURAS) ---
         function obtenerLinkWhatsApp(telefono, mensaje) {
-            // Detectar si es móvil (Android o iPhone)
             const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
-            // Limpiar teléfono
-            const telLimpio = telefono.toString().replace(/\D/g, '');
+            // 1. Limpiar: Quitar guiones y espacios, dejar solo números
+            let telLimpio = telefono.toString().replace(/\D/g, '');
+
+            // 2. AUTO-CORRECCIÓN HONDURAS (504):
+            // Si el número tiene 8 dígitos (ej: 97804913), asumimos que es Honduras y agregamos 504.
+            if (telLimpio.length === 8) {
+                telLimpio = '504' + telLimpio;
+            }
 
             if (esMovil) {
-                // Móvil: Usa api.whatsapp.com (Abre la App)
+                // Móvil: api.whatsapp.com (Abre App)
                 return `https://api.whatsapp.com/send?phone=${telLimpio}&text=${encodeURIComponent(mensaje)}`;
             } else {
-                // PC: Usa web.whatsapp.com (Abre WhatsApp Web Directo)
+                // PC: web.whatsapp.com (Abre Web)
                 return `https://web.whatsapp.com/send?phone=${telLimpio}&text=${encodeURIComponent(mensaje)}`;
             }
         }
@@ -106,7 +109,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                alert("❌ Error de conexión. Verifica internet.");
+                alert("❌ Error de conexión.");
             } finally {
                 mostrarLoader(false);
             }
@@ -201,13 +204,12 @@
             });
         }
 
-        // --- ENVIAR QR (Actualizado) ---
         function enviarQR(fila, telefono, nombre, urlQR, destinatario) {
             if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
             
             let mensaje = `¡Hola ${nombre}! 👋\n\nNos alegra confirmar tu asistencia a la cena "Amor que Permanece". 🌹\n\nAquí tienes tu PASE DE ENTRADA PERSONAL:\n${urlQR}\n\nPor favor preséntalo en la entrada para tu ingreso. ¡Te esperamos! ✨`;
             
-            // Usamos la nueva función inteligente
+            // Llama a la función corregida con 504
             let urlWA = obtenerLinkWhatsApp(telefono, mensaje);
             
             window.open(urlWA, '_blank');
@@ -216,22 +218,21 @@
                 .then(() => { setTimeout(cargarDatos, 1500); });
         }
 
-        // --- ENVIAR RECORDATORIO (Actualizado) ---
         function enviarRecordatorio(fila, telefono, nombre, intentosPrevios) {
             if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
-            if(intentosPrevios >= 5) { alert("🛑 Límite de recordatorios alcanzado."); return; }
+            if(intentosPrevios >= 5) { alert("🛑 Límite alcanzado. Llamar personalmente."); return; }
 
             const mensajes = [
                 `Hola ${nombre}, un gusto saludarte. 👋 Te recordamos completar tu inscripción para la cena enviando el comprobante. ¡Quedan pocos cupos!`, 
                 `Hola ${nombre}, solo pasaba a recordarte que esperamos tu comprobante para asegurar tu mesa en la cena "Amor que Permanece". 🍷 ¡No te quedes fuera!`,
                 `Hola ${nombre}, notamos que aún no tenemos tu comprobante. La fecha se acerca, ¿necesitas ayuda con el pago? Quedamos atentos.`,
                 `Estimado/a ${nombre}, por favor confirma tu asistencia enviando el comprobante hoy para no liberar tu reserva. 🙏`,
-                `⚠️ ÚLTIMO AVISO ${nombre}: Necesitamos tu confirmación urgente para la cena. Por favor avísanos hoy.`
+                `⚠️ ÚLTIMO AVISO ${nombre}: Necesitamos tu confirmación urgente para la cena.`
             ];
 
             let texto = mensajes[intentosPrevios] || mensajes[4];
             
-            // Usamos la nueva función inteligente
+            // Llama a la función corregida con 504
             let urlWA = obtenerLinkWhatsApp(telefono, texto);
             
             window.open(urlWA, '_blank');
