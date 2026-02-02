@@ -23,52 +23,64 @@
             position: relative;
             width: 100%;
             max-width: 450px; 
-            /* Esta proporción (aspect-ratio) es vital para que no se mueva nada */
             aspect-ratio: 9 / 16; 
             max-height: 100vh;
             margin: 0 auto;
-            
-            /* USA LA IMAGEN QUE TIENE EL CUADRO BLANCO VACÍO */
-            background-image: url('tarjeta.png'); 
-            background-size: contain;
+            /* Asegúrate de tener esta imagen en tu GitHub */
+            background-image: url('fondo_pase.png'); 
+            background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
         }
 
-        /* 1. NOMBRES: Calibrados para el hueco entre botón y cuadro blanco */
+        /* NOMBRES: SUBIDOS UN POCO */
         .names-overlay {
             position: absolute;
-            top: 37%;  /* <--- COORDENADA CLAVE */
+            /* CAMBIO: De 36% a 33% para subirlos y evitar el choque */
+            top: 33%;  
             left: 50%;
             transform: translate(-50%, 0);
             width: 90%;
             text-align: center;
-            
             font-family: 'Great Vibes', cursive;
-            font-size: 2.2rem; /* Tamaño ajustado */
+            font-size: 2.3rem;
             color: white;
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.8); /* Sombra fuerte para legibilidad */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             line-height: 1.1;
-            font-weight: normal; 
             z-index: 10;
         }
 
-        /* 2. QR: Calibrado para caer DENTRO del cuadro blanco de la imagen */
+        /* QR: CONTENEDOR BLANCO */
         .qr-overlay {
             position: absolute;
-            top: 64.5%; /* <--- COORDENADA CLAVE (Centro del cuadro blanco) */
+            top: 65%; 
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 10;
             
-            /* Quitamos padding y fondo porque la imagen YA TIENE el cuadro blanco */
-            background: transparent; 
+            background-color: white;
+            /* Un poco menos de padding para que el QR se vea más grande */
+            padding: 12px; 
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         
-        /* Ajuste fino del tamaño del QR para que no se salga del cuadro */
+        /* Asegura que la imagen del QR se comporte bien */
         #qrcode img {
-            display: block;
-            margin: 0 auto;
+            display: block; /* Elimina espacio extra debajo de la imagen */
+        }
+
+        /* TEXTO LEGAL */
+        .legal-text {
+            position: absolute;
+            bottom: 5%;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: sans-serif;
+            font-size: 0.7rem;
+            opacity: 0.9;
+            text-shadow: 1px 1px 2px black;
         }
 
     </style>
@@ -77,28 +89,33 @@
 
     <div class="pass-container">
         <div class="names-overlay" id="displayNames"></div>
+        
         <div class="qr-overlay" id="qrcode"></div>
+
+        <div class="legal-text">
+            Presenta este código al llegar.<br>Válido para un único ingreso. ✨
+        </div>
     </div>
 
     <script>
         const params = new URLSearchParams(window.location.search);
         
-        // Datos de prueba para calibrar
-        const esposo = params.get('esposo') || "Carlos Sanchez";
-        const esposa = params.get('esposa') || "Suyapa Lopez";
+        // Datos de prueba (coinciden con tu imagen para verificar)
+        const esposo = params.get('esposo') || "Luis Alonso Lopez Caceres";
+        const esposa = params.get('esposa') || "Maria Jose Ordoñez Andara";
 
         const nombreEsposo = decodeURIComponent(esposo);
         const nombreEsposa = decodeURIComponent(esposa);
 
         document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
-        // Generamos el QR un poco más pequeño para asegurar que entre en el cuadro
+        // CAMBIO: QR MÁS GRANDE (De 170 a 190)
         new QRCode(document.getElementById("qrcode"), {
             text: `REGISTRO: ${nombreEsposo} & ${nombreEsposa}`,
-            width: 190,  // Tamaño ajustado al cuadro blanco de la imagen
+            width: 190,
             height: 190,
             colorDark : "#000000",
-            colorLight : "#ffffff", // Fondo blanco por seguridad
+            colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
         });
     </script>
