@@ -2,197 +2,126 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Scanner V10 - Selección</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Entrada</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #111; padding: 10px; text-align: center; color: white; margin: 0; }
-        .card { background: white; max-width: 400px; margin: 0 auto; padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.7); color: #333; position: relative; }
-        h2 { color: #741b47; margin: 0 0 5px 0; font-size: 1.2rem; text-transform: uppercase; }
-        .version { font-size: 0.7rem; color: #999; margin-bottom: 5px; }
-        
-        #reader { width: 250px; height: 250px; margin: 0 auto 10px auto; border: 4px solid #333; border-radius: 12px; background: black; overflow: hidden; }
-        
-        .status-box { padding: 12px; margin-top: 5px; border-radius: 8px; display: none; }
-        
-        /* MODAL DE SELECCIÓN (Quién presenta) */
-        #selectionModal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); border-radius: 12px; z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
-        .sel-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #741b47; }
-        .btn-who { width: 80%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; color: white; }
-        .btn-man { background: #2980b9; }
-        .btn-woman { background: #8e44ad; }
-        .btn-who:active { transform: scale(0.95); }
-
-        /* TEXTOS */
-        .titulo-msg { font-size: 1.5rem; font-weight: 900; display: block; margin-bottom: 5px; text-transform: uppercase; line-height: 1; }
-        .pareja-msg { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; color: #444; display: block; }
-        .detalle-msg { font-size: 0.95rem; line-height: 1.4; background: rgba(240,240,240,0.9); padding: 10px; border-radius: 6px; text-align: left; border: 1px solid #ddd; }
-        
-        .label-rojo { color: #c0392b; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; display: block; margin-top: 8px; border-bottom: 1px solid #e74c3c; padding-bottom: 2px; margin-bottom: 5px;}
-
-        /* ESTADOS */
-        .success { background: #27ae60; color: white; border: 2px solid #219150; }
-        .success .pareja-msg { color: white; }
-        .success .detalle-msg { color: #004d26; background: rgba(255,255,255,0.9); text-align: center; }
-
-        .duplicate { background: #f39c12; color: #5a4200; border: 2px solid #e67e22; }
-        .duplicate .titulo-msg { color: #d35400; } 
-        
-        .error { background: #c0392b; color: white; }
-        .processing { background: #2980b9; color: white; }
-
-        button#btnReset { padding: 12px; width: 100%; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; display: none; }
+        body { background-color: #111; color: white; font-family: sans-serif; }
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 15px; border: 4px solid #333; }
     </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
 
-<div class="card">
-    <h2>📸 Check-in</h2>
-    <div class="version">V10.0 - Identificación Exacta</div>
-    
-    <div id="reader"></div>
-    <div id="mensaje" class="status-box"></div>
-    <button id="btnReset" onclick="reiniciar()">🔄 SIGUIENTE</button>
+    <script>
+        // URL DEL BACKEND V29
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec";
+    </script>
 
-    <div id="selectionModal">
-        <div class="sel-title">¿Quién presenta la entrada?</div>
-        <button class="btn-who btn-man" id="btnMan" onclick="selectPerson('man')">👨 ESPOSO</button>
-        <button class="btn-who btn-woman" id="btnWoman" onclick="selectPerson('woman')">👩 ESPOSA</button>
-        <button style="margin-top:20px; background:transparent; border:none; color:#999; text-decoration:underline;" onclick="cancelSelection()">Cancelar</button>
+    <div class="max-w-md w-full bg-gray-900 p-6 rounded-xl shadow-2xl text-center border border-gray-700">
+        <h1 class="text-2xl font-bold mb-6 text-gray-200 tracking-wider">
+            <i class="fas fa-qrcode text-red-500 mr-2"></i>VALIDACIÓN
+        </h1>
+        
+        <div id="reader"></div>
+
+        <div id="result" class="hidden p-6 rounded-lg mt-4 shadow-inner border-2">
+            <div id="icon" class="text-6xl mb-4 animate-bounce"></div>
+            <div id="msg" class="font-bold text-lg whitespace-pre-line leading-relaxed"></div>
+        </div>
+
+        <button onclick="reiniciarScanner()" id="btnReset" class="hidden mt-6 bg-gray-700 hover:bg-gray-600 text-white w-full py-4 rounded-lg font-bold text-lg transition border border-gray-500 shadow-lg">
+            <i class="fas fa-redo mr-2"></i> Escanear Siguiente
+        </button>
     </div>
-</div>
 
-<script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyqplGmpQWsyk2diCIuQK0_VqP-GMrHYV0mvvtD6C1lRQvkP_n2bzNvzB3TOAoBbhOK/exec";
-    
-    let html5QrcodeScanner;
-    let isProcessing = false;
-    
-    // Variables temporales para guardar datos escaneados
-    let tempEsposo = "";
-    let tempEsposa = "";
+    <script>
+        let html5QrcodeScanner;
+        let isScanning = true;
 
-    function onScanSuccess(decodedText) {
-        if (isProcessing) return; 
+        function onScanSuccess(decodedText, decodedResult) {
+            if (!isScanning) return; 
 
-        let esposo = "", esposa = "";
-        // Parsear QR
-        if (decodedText.toUpperCase().includes("BODA:")) {
-            try {
-                const match = decodedText.match(/BODA:\s*(.*?)\s*&\s*(.*?)\s*ESTADO:/i);
-                if (match && match.length >= 3) { esposo = match[1].trim(); esposa = match[2].trim(); }
-            } catch (e) {}
-        } else if (decodedText.includes("esposo=")) {
-            try {
-                let p = decodedText.includes('?') ? new URLSearchParams(decodedText.split('?')[1]) : new URLSearchParams(decodedText);
-                esposo = p.get('esposo'); esposa = p.get('esposa');
-            } catch (e) {}
-        }
-
-        if (esposo && esposa) {
-            // DETENER ESCANEO Y PEDIR CONFIRMACIÓN
-            html5QrcodeScanner.pause();
-            promptSelection(esposo, esposa);
-        } else if(decodedText.includes("BODA")) {
-            mostrar("⚠️ Lectura incorrecta", "error");
-            setTimeout(() => { document.getElementById('mensaje').style.display='none'; }, 1500);
-        }
-    }
-
-    // --- INTERFAZ DE SELECCIÓN ---
-    function promptSelection(esposo, esposa) {
-        tempEsposo = esposo;
-        tempEsposa = esposa;
-        
-        // Ponemos los nombres en los botones
-        document.getElementById('btnMan').innerText = "👨 " + esposo;
-        document.getElementById('btnWoman').innerText = "👩 " + esposa;
-        
-        document.getElementById('selectionModal').style.display = 'flex';
-    }
-
-    function selectPerson(who) {
-        document.getElementById('selectionModal').style.display = 'none';
-        enviarAlBackend(tempEsposo, tempEsposa, who);
-    }
-
-    function cancelSelection() {
-        document.getElementById('selectionModal').style.display = 'none';
-        html5QrcodeScanner.resume();
-    }
-
-    // --- ENVÍO AL BACKEND ---
-    function enviarAlBackend(esposo, esposa, quien) {
-        isProcessing = true;
-        mostrar("⏳ Validando...", "processing");
-        
-        const form = new URLSearchParams();
-        form.append('accion', 'confirmar');
-        form.append('esposo', esposo);
-        form.append('esposa', esposa);
-        form.append('quien', quien); // 'man' o 'woman'
-
-        fetch(API_URL, { method: 'POST', body: form })
-        .then(res => res.json())
-        .then(data => {
-            let info = data.message; 
-            
-            if (data.result === 'success') {
-                mostrar(`
-                    <span class="titulo-msg">✅ ADELANTE</span>
-                    <span class="pareja-msg">${info.nombre1} & ${info.nombre2}</span>
-                    <div class="detalle-msg">
-                        <b>Registrado por:</b><br>
-                        ${info.registradoPor}
-                    </div>
-                `, "success");
-                beep(1000, 0.2); 
-            } else if (data.result === 'duplicate') {
-                // INFO EXACTA DE QUIEN REGISTRÓ
-                let detalleRegistro = info.infoQuien || "Datos no disponibles";
-                
-                mostrar(`
-                    <span class="titulo-msg">⛔ YA SE REGISTRARON</span>
-                    <span class="pareja-msg">${info.nombre1} / ${info.nombre2}</span>
-                    <div class="detalle-msg">
-                        <b>Previamente:</b> ${info.hora}<br>
-                        <span class="label-rojo">La persona que se registró fue:</span>
-                        👤 ${detalleRegistro}
-                    </div>
-                `, "duplicate");
-                beep(200, 0.5); 
-            } else {
-                mostrar(`❌ Error: ${data.message}`, "error");
+            // Filtro de seguridad básico
+            if (!decodedText.includes("REGISTRO:")) {
+                mostrarResultado("error", "⛔ CÓDIGO INVÁLIDO\nEste QR no pertenece al sistema.");
+                return;
             }
-        })
-        .catch(e => mostrar("❌ Error de Red", "error"))
-        .finally(() => document.getElementById('btnReset').style.display = 'block');
-    }
 
-    function mostrar(html, tipo) {
-        const d = document.getElementById('mensaje');
-        d.innerHTML = html; d.className = "status-box " + tipo; d.style.display = 'block';
-    }
+            isScanning = false;
+            // Detenemos cámara visualmente
+            if(html5QrcodeScanner) html5QrcodeScanner.pause();
+            
+            mostrarResultado("loading", "🔍 Verificando bitácora...");
 
-    function reiniciar() {
-        isProcessing = false;
-        document.getElementById('mensaje').style.display = 'none';
-        document.getElementById('btnReset').style.display = 'none';
-        html5QrcodeScanner.resume();
-    }
+            // LLAMADA AL SERVIDOR
+            fetch(`${SCRIPT_URL}?accion=check_in&qr_data=${encodeURIComponent(decodedText)}`)
+            .then(response => response.json())
+            .then(data => {
+                mostrarResultado(data.result, data.message);
+            })
+            .catch(err => {
+                mostrarResultado("error", "❌ ERROR DE RED\nRevisa tu conexión a internet.");
+            });
+        }
 
-    function beep(f, d) {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const o = ctx.createOscillator(); o.connect(ctx.destination);
-            o.frequency.value = f; o.start(); o.stop(ctx.currentTime + d);
-        } catch(e) {}
-    }
+        function onScanFailure(error) {
+            // Ignorar errores de escaneo en progreso
+        }
 
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
-    html5QrcodeScanner.render(onScanSuccess);
-</script>
+        function mostrarResultado(tipo, texto) {
+            const divRes = document.getElementById("result");
+            const icon = document.getElementById("icon");
+            const msg = document.getElementById("msg");
+            const btn = document.getElementById("btnReset");
 
+            // Reset clases
+            divRes.className = "p-6 rounded-lg mt-4 shadow-inner border-2"; // Base
+            divRes.classList.remove("hidden");
+            
+            if (tipo === "success") {
+                // VERDE: ÉXITO
+                divRes.classList.add("bg-green-800", "border-green-500", "text-green-100");
+                icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                // Reproducir sonido "Beep" (Opcional, navegadores modernos bloquean a veces)
+            } else if (tipo === "warning") {
+                // AMARILLO/NARANJA: DUPLICADO (BITÁCORA MOSTRADA)
+                divRes.classList.add("bg-yellow-900", "border-yellow-500", "text-yellow-100");
+                icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500"></i>';
+                icon.classList.remove("animate-bounce"); // Fijo para leer mejor
+            } else if (tipo === "error") {
+                // ROJO: ERROR
+                divRes.classList.add("bg-red-900", "border-red-500", "text-red-100");
+                icon.innerHTML = '<i class="fas fa-ban"></i>';
+            } else if (tipo === "loading") {
+                // AZUL: CARGANDO
+                divRes.classList.add("bg-blue-900", "border-blue-500", "text-blue-100");
+                icon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            }
+
+            msg.innerText = texto;
+            
+            if(tipo !== "loading") {
+                btn.classList.remove("hidden");
+            }
+        }
+
+        function reiniciarScanner() {
+            document.getElementById("result").classList.add("hidden");
+            document.getElementById("btnReset").classList.add("hidden");
+            isScanning = true;
+            if(html5QrcodeScanner) html5QrcodeScanner.resume();
+        }
+
+        // Configuración cámara
+        html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 },
+            false
+        );
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+    </script>
 </body>
 </html>
