@@ -7,11 +7,14 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <title>Matriz de Envíos QR (V17)</title>
+    <title>Matriz de Envíos QR (V18)</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f4f6f7; padding: 20px; color: #333; }
         .container { max-width: 900px; margin: 0 auto; }
-        h1 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+        
+        /* TÍTULO CON VERSIÓN */
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 20px; line-height: 1.2; }
+        .version { font-size: 0.8rem; color: #95a5a6; font-weight: normal; letter-spacing: 1px; }
 
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         .inp-search { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
@@ -20,7 +23,6 @@
         .btn-load { width: 100%; padding: 12px; background: #741b47; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
         .btn-load:hover { background: #5c1538; }
 
-        /* TABLA MATRIZ */
         .tabla-matriz { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .tabla-matriz th { background: #34495e; color: white; padding: 15px; text-align: left; font-weight: 600; }
         .tabla-matriz td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
@@ -52,11 +54,15 @@
 <body>
 
 <div class="container">
-    <h1>📋 Matriz de Envíos QR</h1>
+    <h1>
+        📋 Matriz de Envíos QR<br>
+        <span class="version">Versión 18.0</span>
+    </h1>
+    
     <button class="btn-load" onclick="cargarPendientes()">🔄 Refrescar Datos (Sincronización)</button>
 
     <div class="search-box">
-        <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar pareja..." onkeypress="handleEnter(event)">
+        <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar pareja (Solo Pendientes)..." onkeypress="handleEnter(event)">
         <button class="btn-search" onclick="buscarPersona()">🔍 Buscar</button>
     </div>
 
@@ -64,6 +70,7 @@
 </div>
 
 <script>
+    // ⚠️ REVISA QUE ESTA URL SEA LA NUEVA (V18) DE APPS SCRIPT
     const API_URL = "https://script.google.com/macros/s/AKfycbz-erGjGqH4CGGz7E8CY3GmCsBjsms0bkHSx169VYfvMsHle0vrSvcL8ik6DDE_HhgO5w/exec";
 
     window.onload = function() { cargarPendientes(); };
@@ -85,15 +92,14 @@
         const cont = document.getElementById('contenedorTabla');
         cont.innerHTML = '<div class="loading">⏳ Consultando servidor...</div>';
 
-        // TRUCO ANTI-CACHÉ: Agregamos un timestamp único a la URL
+        // TIMESTAMP PARA EVITAR CACHÉ
         const uniqueId = new Date().getTime(); 
         const url = new URL(API_URL);
         url.searchParams.append("accion", accion);
-        url.searchParams.append("_t", uniqueId); // <--- ESTO FUERZA LA RECARGA
+        url.searchParams.append("_t", uniqueId); 
 
         for (const key in params) url.searchParams.append(key, params[key]);
 
-        // Configuración para ignorar caché del navegador
         fetch(url, { cache: "no-store" }) 
         .then(res => res.json())
         .then(data => {
@@ -111,7 +117,7 @@
         cont.innerHTML = "";
 
         if(lista.length === 0) {
-            cont.innerHTML = `<div class="empty">✨ Todo listo. No hay pendientes.</div>`;
+            cont.innerHTML = `<div class="empty">✨ Todo listo. No hay registros pendientes.</div>`;
             return;
         }
 
@@ -128,43 +134,31 @@
         `;
 
         lista.forEach(item => {
-            // El link viene directo de la base de datos (Col Q)
             const msg = `¡Hola! Su registro a la cena romántica: "Amor que prevalece" se ha procesado satisfactoriamente.\n\nPara encontrar su código QR:\n${item.link}\n\n¡Los esperamos!`;
             const encMsg = encodeURIComponent(msg);
             
             let t1 = limpiarTel(item.tel1);
             let t2 = limpiarTel(item.tel2);
-            const esCompleto = item.yaEnviado === true;
 
             // BOTÓN ESPOSO
-            let btnMan = "";
-            if(t1) {
-                let claseExtra = esCompleto ? "enviado" : "";
-                let textoBtn = esCompleto ? "✔ Ya Enviado" : "📲 Enviar QR";
-                btnMan = `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" 
-                             class="btn-send ${claseExtra}" 
-                             id="btn-man-${item.fila}"
-                             onclick="registrarEnvio(this, ${item.fila}, 'man')">
-                             ${textoBtn} <br><small>${item.esposo.split(' ')[0]}</small>
-                          </a>`;
-            } else {
-                btnMan = `<div class="btn-send no-phone">🚫 Sin Tel</div>`;
-            }
+            let btnMan = t1 
+                ? `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" 
+                     class="btn-send" 
+                     id="btn-man-${item.fila}"
+                     onclick="registrarEnvio(this, ${item.fila}, 'man')">
+                     📲 Enviar QR <br><small>${item.esposo.split(' ')[0]}</small>
+                  </a>`
+                : `<div class="btn-send no-phone">🚫 Sin Tel</div>`;
 
             // BOTÓN ESPOSA
-            let btnWoman = "";
-            if(t2) {
-                let claseExtra = esCompleto ? "enviado" : "";
-                let textoBtn = esCompleto ? "✔ Ya Enviado" : "📲 Enviar QR";
-                btnWoman = `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" 
-                               class="btn-send ${claseExtra}" 
-                               id="btn-woman-${item.fila}"
-                               onclick="registrarEnvio(this, ${item.fila}, 'woman')">
-                               ${textoBtn} <br><small>${item.esposa.split(' ')[0]}</small>
-                            </a>`;
-            } else {
-                btnWoman = `<div class="btn-send no-phone">🚫 Sin Tel</div>`;
-            }
+            let btnWoman = t2
+                ? `<a href="https://wa.me/${t2}?text=${encMsg}" target="_blank" 
+                     class="btn-send" 
+                     id="btn-woman-${item.fila}"
+                     onclick="registrarEnvio(this, ${item.fila}, 'woman')">
+                     📲 Enviar QR <br><small>${item.esposa.split(' ')[0]}</small>
+                  </a>`
+                : `<div class="btn-send no-phone">🚫 Sin Tel</div>`;
 
             html += `
                 <tr id="fila-${item.fila}">
@@ -208,10 +202,8 @@
         .then(data => {
             if(data.result === 'success') {
                 const tr = document.getElementById(`fila-${fila}`);
-                if(!document.getElementById('txtBuscar').value) {
-                    tr.classList.add('fade-out');
-                    setTimeout(() => tr.remove(), 600);
-                }
+                tr.classList.add('fade-out');
+                setTimeout(() => tr.remove(), 600);
             }
         });
     }
