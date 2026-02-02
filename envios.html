@@ -34,14 +34,33 @@
             </div>
         </header>
 
-        <div class="mb-6">
-            <div class="relative">
+        <div class="mb-6 flex flex-col md:flex-row gap-4">
+            
+            <div class="relative flex-grow">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <i class="fas fa-search text-gray-400"></i>
                 </span>
                 <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar por nombre..." 
                        class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none transition">
             </div>
+
+            <div class="w-full md:w-1/4">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fas fa-filter text-gray-500"></i>
+                    </span>
+                    <select id="filterStatus" onchange="filtrarTabla()" 
+                            class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none appearance-none bg-white cursor-pointer">
+                        <option value="TODOS">Todas las Parejas</option>
+                        <option value="PENDIENTE">⚠️ Pendientes de Pago</option>
+                        <option value="PAGADO">✅ Pagados (Listos)</option>
+                    </select>
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </span>
+                </div>
+            </div>
+
         </div>
 
         <div class="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -60,7 +79,7 @@
             </div>
             <div id="emptyState" class="hidden p-10 text-center text-gray-500">
                 <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
-                <p>No se encontraron registros.</p>
+                <p>No se encontraron registros con ese filtro.</p>
             </div>
         </div>
 
@@ -73,24 +92,17 @@
     <script>
         let datosGlobales = [];
 
-        // --- FUNCIÓN INTELIGENTE CON CORRECCIÓN DE PAÍS (HONDURAS) ---
         function obtenerLinkWhatsApp(telefono, mensaje) {
             const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            // 1. Limpiar: Quitar guiones y espacios, dejar solo números
             let telLimpio = telefono.toString().replace(/\D/g, '');
 
-            // 2. AUTO-CORRECCIÓN HONDURAS (504):
-            // Si el número tiene 8 dígitos (ej: 97804913), asumimos que es Honduras y agregamos 504.
             if (telLimpio.length === 8) {
                 telLimpio = '504' + telLimpio;
             }
 
             if (esMovil) {
-                // Móvil: api.whatsapp.com (Abre App)
                 return `https://api.whatsapp.com/send?phone=${telLimpio}&text=${encodeURIComponent(mensaje)}`;
             } else {
-                // PC: web.whatsapp.com (Abre Web)
                 return `https://web.whatsapp.com/send?phone=${telLimpio}&text=${encodeURIComponent(mensaje)}`;
             }
         }
@@ -103,7 +115,8 @@
                 
                 if (data.result === "success") {
                     datosGlobales = data.message;
-                    renderizarTabla(datosGlobales);
+                    // Al cargar, aplicamos el filtro por defecto (TODOS)
+                    filtrarTabla();
                 } else {
                     alert("⚠️ Error del servidor: " + data.message);
                 }
@@ -164,14 +177,12 @@
                     
                     htmlAcciones += `<div class="flex justify-center gap-2">`;
                     
-                    // Botón Esposo
                     let yaEnviadoO = item.notifStatus.includes("o");
                     let btnClass1 = yaEnviadoO ? "bg-gray-200 text-gray-500 cursor-default border border-gray-300" : "bg-green-500 text-white hover:bg-green-600 shadow hover:shadow-md";
                     let icon1 = yaEnviadoO ? '<i class="fas fa-check-double"></i>' : '<i class="fab fa-whatsapp"></i>';
                     let label1 = yaEnviadoO ? "Enviado" : "Enviar a Él";
                     htmlAcciones += `<button onclick="enviarQR(${item.fila}, '${item.tel1}', '${item.esposo}', '${item.qrUrl}', 'esposo')" class="${btnClass1} px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">${icon1} ${label1}</button>`;
 
-                    // Botón Esposa
                     let yaEnviadoA = item.notifStatus.includes("a");
                     let btnClass2 = yaEnviadoA ? "bg-gray-200 text-gray-500 cursor-default border border-gray-300" : "bg-green-500 text-white hover:bg-green-600 shadow hover:shadow-md";
                     let icon2 = yaEnviadoA ? '<i class="fas fa-check-double"></i>' : '<i class="fab fa-whatsapp"></i>';
@@ -204,16 +215,33 @@
             });
         }
 
+        // --- NUEVA LÓGICA DE FILTRADO COMBINADO ---
+        function filtrarTabla() {
+            const texto = document.getElementById("searchInput").value.toLowerCase();
+            const estado = document.getElementById("filterStatus").value; // "TODOS", "PAGADO", "PENDIENTE"
+
+            const filtrados = datosGlobales.filter(item => {
+                // 1. Filtro de Texto (Nombre)
+                const coincideTexto = (item.esposo && item.esposo.toLowerCase().includes(texto)) || 
+                                      (item.esposa && item.esposa.toLowerCase().includes(texto));
+                
+                // 2. Filtro de Estado (Dropdown)
+                let coincideEstado = true;
+                if (estado === "PAGADO") coincideEstado = item.tienePago === true;
+                if (estado === "PENDIENTE") coincideEstado = item.tienePago === false;
+
+                // Ambos deben cumplirse
+                return coincideTexto && coincideEstado;
+            });
+
+            renderizarTabla(filtrados);
+        }
+
         function enviarQR(fila, telefono, nombre, urlQR, destinatario) {
             if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
-            
             let mensaje = `¡Hola ${nombre}! 👋\n\nNos alegra confirmar tu asistencia a la cena "Amor que Permanece". 🌹\n\nAquí tienes tu PASE DE ENTRADA PERSONAL:\n${urlQR}\n\nPor favor preséntalo en la entrada para tu ingreso. ¡Te esperamos! ✨`;
-            
-            // Llama a la función corregida con 504
             let urlWA = obtenerLinkWhatsApp(telefono, mensaje);
-            
             window.open(urlWA, '_blank');
-            
             fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=qr&fila=${fila}&destinatario=${destinatario}`, { method: 'POST' })
                 .then(() => { setTimeout(cargarDatos, 1500); });
         }
@@ -221,7 +249,6 @@
         function enviarRecordatorio(fila, telefono, nombre, intentosPrevios) {
             if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
             if(intentosPrevios >= 5) { alert("🛑 Límite alcanzado. Llamar personalmente."); return; }
-
             const mensajes = [
                 `Hola ${nombre}, un gusto saludarte. 👋 Te recordamos completar tu inscripción para la cena enviando el comprobante. ¡Quedan pocos cupos!`, 
                 `Hola ${nombre}, solo pasaba a recordarte que esperamos tu comprobante para asegurar tu mesa en la cena "Amor que Permanece". 🍷 ¡No te quedes fuera!`,
@@ -229,25 +256,15 @@
                 `Estimado/a ${nombre}, por favor confirma tu asistencia enviando el comprobante hoy para no liberar tu reserva. 🙏`,
                 `⚠️ ÚLTIMO AVISO ${nombre}: Necesitamos tu confirmación urgente para la cena.`
             ];
-
             let texto = mensajes[intentosPrevios] || mensajes[4];
-            
-            // Llama a la función corregida con 504
             let urlWA = obtenerLinkWhatsApp(telefono, texto);
-            
             window.open(urlWA, '_blank');
-
             fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, { method: 'POST' })
                 .then(() => { setTimeout(cargarDatos, 1500); });
         }
 
-        function filtrarTabla() {
-            const texto = document.getElementById("searchInput").value.toLowerCase();
-            const filtrados = datosGlobales.filter(item => (item.esposo && item.esposo.toLowerCase().includes(texto)) || (item.esposa && item.esposa.toLowerCase().includes(texto)));
-            renderizarTabla(filtrados);
-        }
-
         function mostrarLoader(show) { document.getElementById("loader").classList.toggle("hidden", !show); }
+        
         window.onload = cargarDatos;
     </script>
 </body>
