@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Despacho QRs - Matriz</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Matriz de Envíos QR (V17)</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f4f6f7; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; } /* Más ancho para la tabla */
-        
+        .container { max-width: 900px; margin: 0 auto; }
         h1 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
 
-        /* BUSCADOR */
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
         .inp-search { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
         .btn-search { padding: 12px 20px; background: #2c3e50; color: white; border: none; border-radius: 6px; cursor: pointer; }
@@ -18,7 +20,7 @@
         .btn-load { width: 100%; padding: 12px; background: #741b47; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
         .btn-load:hover { background: #5c1538; }
 
-        /* --- ESTILOS DE LA MATRIZ (TABLA) --- */
+        /* TABLA MATRIZ */
         .tabla-matriz { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .tabla-matriz th { background: #34495e; color: white; padding: 15px; text-align: left; font-weight: 600; }
         .tabla-matriz td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
@@ -28,56 +30,30 @@
         .col-nombres { width: 40%; font-size: 1.1rem; color: #741b47; font-weight: bold; }
         .col-btn { width: 30%; text-align: center; }
 
-        /* --- BOTONES DE ENVÍO --- */
         .btn-send {
-            display: inline-block;
-            width: 90%;
-            padding: 10px 5px;
-            background-color: #27ae60; /* VERDE */
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            transition: 0.2s;
-            text-align: center;
-            border: 1px solid transparent;
+            display: inline-block; width: 90%; padding: 10px 5px;
+            background-color: #27ae60; color: white;
+            text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.9rem;
+            transition: 0.2s; text-align: center; border: 1px solid transparent;
         }
         .btn-send:hover { background-color: #219150; transform: translateY(-1px); }
 
-        /* ESTADO: ENVIADO (GRIS) */
         .btn-send.enviado {
-            background-color: #bdc3c7; /* GRIS CLARO */
-            color: #7f8c8d;
-            border: 1px solid #bdc3c7;
-            cursor: default;
-            pointer-events: none; /* Ya no se puede clicar */
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            background-color: #bdc3c7; color: #7f8c8d;
+            border: 1px solid #bdc3c7; cursor: default; pointer-events: none;
         }
-        
-        /* ESTADO: SIN TELÉFONO */
-        .no-phone {
-            background-color: #ecf0f1;
-            color: #bdc3c7;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
+        .no-phone { background-color: #ecf0f1; color: #bdc3c7; cursor: not-allowed; pointer-events: none; }
 
-        .check-icon { font-size: 1.1em; margin-right: 5px; }
         .loading { text-align: center; padding: 20px; font-style: italic; color: #777; }
         .empty { text-align: center; padding: 30px; color: #aaa; background: white; border-radius: 8px; }
-
-        /* Animación para cuando desaparece la fila */
         .fade-out { opacity: 0; transition: opacity 0.5s ease-out; }
-
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>📋 Matriz de Envíos QR</h1>
-    
-    <button class="btn-load" onclick="cargarPendientes()">🔄 Sincronizar y Ver Pendientes</button>
+    <button class="btn-load" onclick="cargarPendientes()">🔄 Refrescar Datos (Sincronización)</button>
 
     <div class="search-box">
         <input type="text" id="txtBuscar" class="inp-search" placeholder="Buscar pareja..." onkeypress="handleEnter(event)">
@@ -88,7 +64,6 @@
 </div>
 
 <script>
-    // ⚠️ PEGA AQUÍ TU URL NUEVA DE APPS SCRIPT
     const API_URL = "https://script.google.com/macros/s/AKfycbz-erGjGqH4CGGz7E8CY3GmCsBjsms0bkHSx169VYfvMsHle0vrSvcL8ik6DDE_HhgO5w/exec";
 
     window.onload = function() { cargarPendientes(); };
@@ -108,18 +83,22 @@
 
     function buscarAPI(accion, params) {
         const cont = document.getElementById('contenedorTabla');
-        if(accion === "listar_envios") cont.innerHTML = '<div class="loading">⚙️ Sincronizando datos...</div>';
-        else cont.innerHTML = '<div class="loading">⏳ Buscando...</div>';
+        cont.innerHTML = '<div class="loading">⏳ Consultando servidor...</div>';
 
+        // TRUCO ANTI-CACHÉ: Agregamos un timestamp único a la URL
+        const uniqueId = new Date().getTime(); 
         const url = new URL(API_URL);
         url.searchParams.append("accion", accion);
+        url.searchParams.append("_t", uniqueId); // <--- ESTO FUERZA LA RECARGA
+
         for (const key in params) url.searchParams.append(key, params[key]);
 
-        fetch(url)
+        // Configuración para ignorar caché del navegador
+        fetch(url, { cache: "no-store" }) 
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                renderizarTabla(data.message, accion === "buscar_pareja");
+                renderizarTabla(data.message);
             } else {
                 cont.innerHTML = `<div class="empty">❌ Error: ${data.message}</div>`;
             }
@@ -127,7 +106,7 @@
         .catch(e => cont.innerHTML = `<div class="empty">❌ Error de conexión</div>`);
     }
 
-    function renderizarTabla(lista, esBusqueda) {
+    function renderizarTabla(lista) {
         const cont = document.getElementById('contenedorTabla');
         cont.innerHTML = "";
 
@@ -136,7 +115,6 @@
             return;
         }
 
-        // Crear Estructura de Tabla
         let html = `
         <table class="tabla-matriz">
             <thead>
@@ -150,19 +128,17 @@
         `;
 
         lista.forEach(item => {
-            // Preparar mensaje y teléfonos
-            const msg = `¡Hola! Su registro a la cena romantica: "Amor que prevalece" se ha procesado satisfactoriamente.\n\nPara encontrar su codigo QR:\n${item.link}\n\n¡Los esperamos!`;
+            // El link viene directo de la base de datos (Col Q)
+            const msg = `¡Hola! Su registro a la cena romántica: "Amor que prevalece" se ha procesado satisfactoriamente.\n\nPara encontrar su código QR:\n${item.link}\n\n¡Los esperamos!`;
             const encMsg = encodeURIComponent(msg);
+            
             let t1 = limpiarTel(item.tel1);
             let t2 = limpiarTel(item.tel2);
-
-            // Determinar si ya está todo "Completo" (para búsquedas)
             const esCompleto = item.yaEnviado === true;
 
             // BOTÓN ESPOSO
             let btnMan = "";
             if(t1) {
-                // Si es búsqueda y ya estaba enviado, lo mostramos gris. Si no, verde.
                 let claseExtra = esCompleto ? "enviado" : "";
                 let textoBtn = esCompleto ? "✔ Ya Enviado" : "📲 Enviar QR";
                 btnMan = `<a href="https://wa.me/${t1}?text=${encMsg}" target="_blank" 
@@ -203,35 +179,21 @@
         cont.innerHTML = html;
     }
 
-    // --- LÓGICA DE ACTUALIZACIÓN AUTOMÁTICA ---
     function registrarEnvio(btn, fila, quien) {
-        // 1. Cambiar visualmente el botón clickeado
-        if(btn.classList.contains('enviado')) return; // Evitar doble clic
+        if(btn.classList.contains('enviado')) return;
         
         btn.classList.add('enviado');
-        // Mantener el nombre abajo, cambiar solo el texto de arriba
         const nombre = btn.querySelector('small').innerText;
         btn.innerHTML = `✔ Enviado<br><small>${nombre}</small>`;
 
-        // 2. Verificar estado del OTRO botón
         const idOtro = (quien === 'man') ? `btn-woman-${fila}` : `btn-man-${fila}`;
         const btnOtro = document.getElementById(idOtro);
 
-        // CONDICIONES PARA COMPLETAR:
-        // A. El otro botón ya está enviado (tiene clase 'enviado')
-        // B. O el otro botón NO existe (porque no tenía teléfono, es clase 'no-phone')
         let otroListo = false;
-        
-        if (!btnOtro) {
-            // Caso raro, pero asumimos listo si no hay botón
-            otroListo = true; 
-        } else if (btnOtro.classList.contains('enviado') || btnOtro.classList.contains('no-phone')) {
-            otroListo = true;
-        }
+        if (!btnOtro) otroListo = true; 
+        else if (btnOtro.classList.contains('enviado') || btnOtro.classList.contains('no-phone')) otroListo = true;
 
-        // 3. Si AMBOS están listos, avisar al Backend
         if (otroListo) {
-            console.log(`Fila ${fila} completa. Guardando en BD...`);
             guardarEnBackend(fila);
         }
     }
@@ -245,9 +207,7 @@
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                // Opcional: Desvanecer la fila porque ya terminamos con ella
                 const tr = document.getElementById(`fila-${fila}`);
-                // Si estamos en "Pendientes" (no búsqueda), la quitamos
                 if(!document.getElementById('txtBuscar').value) {
                     tr.classList.add('fade-out');
                     setTimeout(() => tr.remove(), 600);
