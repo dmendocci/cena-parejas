@@ -26,8 +26,7 @@
             aspect-ratio: 9 / 16; 
             max-height: 100vh;
             margin: 0 auto;
-            /* Usando tu imagen actual */
-            background-image: url('tarjeta.png'); 
+            background-image: url('fondo_pase.png'); 
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
@@ -36,14 +35,12 @@
         /* NOMBRES */
         .names-overlay {
             position: absolute;
-            /* Ajuste fino: Bajamos un poco para separarlo del botón */
             top: 35%;  
             left: 50%;
             transform: translate(-50%, 0);
             width: 90%;
             text-align: center;
             font-family: 'Great Vibes', cursive;
-            /* Reducimos ligeramente la fuente para que no choque con el botón grande */
             font-size: 2.2rem; 
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
@@ -51,11 +48,10 @@
             z-index: 10;
         }
 
-        /* QR: MÁS GRANDE Y BAJADO */
+        /* QR: BAJADO AL 69% (Aprox 3 líneas más abajo) */
         .qr-overlay {
             position: absolute;
-            /* Bajado al 66% para centrar en el cuadro */
-            top: 66%; 
+            top: 69%;  /* <--- AQUÍ ESTÁ EL CAMBIO */
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 10;
@@ -77,7 +73,7 @@
     <div class="pass-container">
         <div class="names-overlay" id="displayNames"></div>
         <div class="qr-overlay" id="qrcode"></div>
-        </div>
+    </div>
 
     <script>
         const params = new URLSearchParams(window.location.search);
@@ -90,7 +86,6 @@
 
         document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
-        // QR AUMENTADO A 200px
         new QRCode(document.getElementById("qrcode"), {
             text: `REGISTRO: ${nombreEsposo} & ${nombreEsposa}`,
             width: 200,
