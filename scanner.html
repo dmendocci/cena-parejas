@@ -3,218 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Entrada - Cena Parejas</title>
-    
+    <title>Scanner Entrada</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
-        body { background-color: #1a202c; color: white; font-family: sans-serif; }
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; margin-bottom: 20px; border: 2px solid #4a5568; }
-        
-        .success-screen { background-color: #22c55e; } 
-        .error-screen { background-color: #ef4444; }   
-        .warning-screen { background-color: #f59e0b; } 
-        
-        #html5-qrcode-button-camera-stop, #html5-qrcode-button-camera-start, #html5-qrcode-button-camera-permission {
-            padding: 8px 16px; border-radius: 5px; background: #3b82f6; color: white; border: none; margin: 5px; cursor: pointer;
-        }
+        body { background-color: #000; color: white; font-family: sans-serif; }
+        #reader { width: 100%; border-radius: 0 0 20px 20px; overflow: hidden; border-bottom: 2px solid #333; }
+        .success { background-color: #22c55e; } 
+        .error { background-color: #ef4444; }   
+        .warning { background-color: #f59e0b; } 
+        button { padding: 10px 20px; border-radius: 8px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
-    <div class="p-4 bg-gray-900 shadow-md z-10 text-center border-b border-gray-800">
-        <h1 class="text-xl font-bold text-red-500 tracking-wider">SCANNER ENTRADA ❤️</h1>
-        <p id="status-db" class="text-xs text-gray-400 mt-1 animate-pulse">Conectando...</p>
+    <div id="reader"></div>
+
+    <div class="p-4 text-center">
+        <p id="status-db" class="text-sm text-gray-400 animate-pulse">⏳ Descargando lista del portero...</p>
+        <p class="text-xs text-gray-600 mt-2">Versión Frontend: Sin Filtros</p>
     </div>
 
-    <div class="flex-grow flex flex-col items-center justify-start pt-6 px-4 overflow-y-auto">
-        <div id="reader"></div>
-        <div class="text-sm text-gray-400 text-center mt-2 px-4 bg-gray-800 p-2 rounded">
-            💡 Si no enfoca, cambia la cámara en el menú superior.
-        </div>
-    </div>
-
-    <div id="result-overlay" class="fixed inset-0 hidden flex flex-col items-center justify-center text-center p-6 z-50 transition-all duration-300">
-        <div id="result-icon" class="text-8xl mb-4 transform hover:scale-110 transition-transform"></div>
-        <h2 id="result-title" class="text-4xl font-bold mb-2 uppercase drop-shadow-md"></h2>
-        <p id="result-name" class="text-2xl font-semibold drop-shadow-sm text-white border-b-2 border-white/20 pb-2 mb-2"></p>
-        <p id="result-msg" class="mt-2 text-lg opacity-90 text-white font-medium"></p>
-        
-        <button onclick="cerrarOverlay()" class="mt-8 bg-white text-gray-900 font-bold py-4 px-12 rounded-full shadow-2xl text-lg hover:bg-gray-100 active:scale-95 transition-all">
-            ESCANEAR SIGUIENTE
-        </button>
+    <div id="overlay" class="fixed inset-0 hidden flex flex-col items-center justify-center p-6 text-center z-50">
+        <div id="icon" class="text-8xl mb-4"></div>
+        <h2 id="title" class="text-4xl font-bold mb-2 uppercase"></h2>
+        <p id="name" class="text-2xl font-semibold mb-2"></p>
+        <p id="msg" class="text-lg opacity-90"></p>
+        <button onclick="resetScanner()" class="bg-white text-black shadow-lg">SIGUIENTE</button>
     </div>
 
     <script>
-        // ==========================================
-        // ⚠️ PEGA AQUÍ TU URL (LA MISMA QUE EN ENVIOS.HTML)
-        // ==========================================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec'; 
-        // ==========================================
+        // =====================================================
+        // ⚠️ PEGA AQUÍ LA URL DE TU SCRIPT (VERSION 2 FEB)
+        // =====================================================
+        const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec'; 
+        // =====================================================
 
-        let listaInvitados = [];
-        let html5QrcodeScanner = null;
-        let isScanning = true;
+        let invitados = [];
+        let scanner = null;
+        let escaneando = true;
 
-        // --- 1. CARGA DE BASE DE DATOS INTELIGENTE ---
-        async function cargarBaseDatos() {
-            const statusEl = document.getElementById('status-db');
+        // 1. EL "PORTERO" DESCARGA LA LISTA (SIN FILTROS RAROS)
+        async function descargarLista() {
+            const status = document.getElementById('status-db');
             try {
-                // Pedimos "listar_envios" (o "listar_todo") porque sabemos que esa función YA EXISTE y funciona en tu script actual
-                // No usamos "listar_asistencia" si tu script viejo no la tiene.
-                const response = await fetch(`${APPS_SCRIPT_URL}?accion=listar_envios`);
-                const data = await response.json();
+                // Pedimos la lista tal cual la usa envios.html
+                const resp = await fetch(`${URL_SCRIPT}?accion=listar_todo`);
+                const json = await resp.json();
                 
-                if (data.result === "success") {
-                    // AQUÍ ESTÁ LA MAGIA: FILTRADO EN EL NAVEGADOR
-                    // Recibimos la lista sucia y la limpiamos aquí mismo.
-                    const listaCruda = data.message;
-                    
-                    listaInvitados = listaCruda.filter(item => {
-                        // Filtro: Debe tener Link Y tener Nombre (Esposo o Esposa)
-                        return item.link && item.link.length > 5 && 
-                               ((item.esposo && item.esposo.trim().length > 1) || (item.esposa && item.esposa.trim().length > 1));
-                    }).map(item => {
-                        // Transformamos al formato que necesita el escáner
-                        return {
-                            fila: item.fila,
-                            nombres: `${item.esposo} & ${item.esposa}`,
-                            // Si tu script viejo no manda "asistio", asumimos falso por ahora (o lo manejamos luego)
-                            asistio: false // Por defecto
-                        };
-                    });
+                if (json.result === "success") {
+                    // AQUÍ ESTABA EL ERROR ANTES: NO FILTRAMOS NADA
+                    // Guardamos todo lo que tenga nombre, aunque sea fila vacía con basura
+                    invitados = json.message.map(p => ({
+                        // Unimos nombres para buscar fácil
+                        busqueda: normalizar(p.esposo + " " + p.esposa),
+                        nombreMostar: `${p.esposo} & ${p.esposa}`,
+                        fila: p.fila,
+                        // Si el script viejo no manda "yaEntro", asumimos false
+                        yaEntro: false 
+                    }));
 
-                    statusEl.innerHTML = `✅ <b>LISTO:</b> ${listaInvitados.length} parejas reales cargadas.`;
-                    statusEl.classList.remove('animate-pulse', 'text-gray-400');
-                    statusEl.classList.add('text-green-400');
-                    
-                    iniciarScanner(); 
+                    status.innerHTML = `✅ <b>LISTO:</b> Portero tiene ${invitados.length} nombres.`;
+                    status.className = "text-sm text-green-500 font-bold";
+                    iniciarCamara();
                 } else {
-                    throw new Error(data.message);
+                    status.innerHTML = "❌ Error en datos.";
                 }
             } catch (e) {
-                // Intento alternativo por si la acción se llama "listar_todo"
-                if(e.message && e.message.includes("Acción desconocida")) {
-                     console.warn("Reintentando con listar_todo...");
-                     fetch(`${APPS_SCRIPT_URL}?accion=listar_todo`)
-                        .then(r => r.json())
-                        .then(d => {
-                             if(d.result === "success") {
-                                 // Repetimos lógica de limpieza
-                                 const listaCruda = d.message;
-                                 listaInvitados = listaCruda.filter(item => item.link && item.link.length > 5 && ((item.esposo && item.esposo.trim().length > 1) || (item.esposa && item.esposa.trim().length > 1)))
-                                     .map(item => ({ fila: item.fila, nombres: `${item.esposo} & ${item.esposa}`, asistio: false }));
-                                 
-                                 statusEl.innerHTML = `✅ <b>LISTO:</b> ${listaInvitados.length} parejas reales.`;
-                                 statusEl.classList.remove('animate-pulse', 'text-gray-400');
-                                 statusEl.classList.add('text-green-400');
-                                 iniciarScanner();
-                             }
-                        }).catch(err => {
-                            mostrarErrorCarga(err);
-                        });
-                } else {
-                    mostrarErrorCarga(e);
-                }
+                status.innerHTML = "❌ Error de conexión.";
+                console.error(e);
             }
         }
 
-        function mostrarErrorCarga(e) {
-            const statusEl = document.getElementById('status-db');
-            statusEl.innerHTML = "❌ <b>ERROR:</b> Fallo de conexión.";
-            statusEl.classList.remove('text-gray-400');
-            statusEl.classList.add('text-red-500');
-            console.error(e);
+        // 2. LIMPIADOR DE TEXTO (QUITAR TILDES Y MAYÚSCULAS)
+        function normalizar(txt) {
+            if(!txt) return "";
+            return txt.toString().toLowerCase()
+                .replace("registro:", "") // Por si el QR dice "REGISTRO: Juan"
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
+                .replace(/[^a-z0-9 ]/g, "") // Quitar símbolos raros
+                .trim();
         }
 
-        // --- 2. NORMALIZADOR DE TEXTO ---
-        function normalizar(texto) {
-            if (!texto) return "";
-            return texto.toString()
-                .toLowerCase()
-                .replace("registro:", "")
-                .trim()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                .replace(/\s+/g, " ");
-        }
-
-        // --- 3. AL ESCANEAR ---
-        function onScanSuccess(decodedText, decodedResult) {
-            if (!isScanning) return; 
+        // 3. CUANDO EL ESCÁNER LEE ALGO
+        function alLeerQR(textoQR) {
+            if (!escaneando) return;
             
-            isScanning = false; 
-            if(html5QrcodeScanner) html5QrcodeScanner.pause();
+            // Pausa visual
+            escaneando = false; 
+            if(scanner) scanner.pause();
 
-            const qrLimpio = normalizar(decodedText);
-            console.log("Leído:", qrLimpio);
+            const qrLimpio = normalizar(textoQR);
+            console.log("Buscando:", qrLimpio);
 
-            const encontrado = listaInvitados.find(invitado => {
-                const dbNombre = normalizar(invitado.nombres);
-                return dbNombre.includes(qrLimpio) || qrLimpio.includes(dbNombre);
+            // BÚSQUEDA FLEXIBLE
+            // ¿El QR está en la lista? O ¿La lista está en el QR?
+            const encontrado = invitados.find(p => {
+                if(!p.busqueda) return false;
+                return p.busqueda.includes(qrLimpio) || qrLimpio.includes(p.busqueda);
             });
 
             if (encontrado) {
-                if (encontrado.asistio) {
-                    mostrarPantalla("warning", "⚠️ YA INGRESÓ", encontrado.nombres, "Esta pareja ya fue marcada (Localmente).");
+                if (encontrado.yaEntro) {
+                    mostrarResultado("warning", "⚠️ YA ESTÁ DENTRO", encontrado.nombreMostar, "Ya se registró antes.");
                 } else {
-                    mostrarPantalla("success", "✅ BIENVENIDOS", encontrado.nombres, "Pase válido.");
-                    // Intentamos marcar asistencia en backend (si la función existe)
-                    registrarEntradaBackend(encontrado.fila);
-                    encontrado.asistio = true; 
+                    mostrarResultado("success", "✅ ADELANTE", encontrado.nombreMostar, "Bienvenidos.");
+                    // Marcar localmente
+                    encontrado.yaEntro = true;
+                    // Intentar avisar al servidor (sin esperar respuesta para no trabar)
+                    avisarServidor(encontrado.fila);
                 }
             } else {
-                mostrarPantalla("error", "❌ NO ENCONTRADO", "QR Desconocido", "Verifique el pase.");
+                mostrarResultado("error", "🚫 NO ENCONTRADO", "QR Desconocido", "Verifique lista.");
             }
         }
 
-        function onScanFailure(error) {}
+        function avisarServidor(fila) {
+            // Intenta marcar en Google Sheets. Si falla, no importa, ya entró.
+            fetch(`${URL_SCRIPT}?accion=marcar_asistencia&fila=${fila}`, {method: 'POST'}).catch(e=>console.log(e));
+        }
 
-        function mostrarPantalla(tipo, titulo, nombre, mensaje) {
-            const overlay = document.getElementById('result-overlay');
-            const icon = document.getElementById('result-icon');
-            overlay.className = "fixed inset-0 flex flex-col items-center justify-center text-center p-6 z-50 transition-all duration-300 text-white";
+        // 4. MOSTRAR PANTALLA DE COLORES
+        function mostrarResultado(tipo, titulo, nombre, msg) {
+            const overlay = document.getElementById('overlay');
+            const icon = document.getElementById('icon');
             
-            if (tipo === 'success') {
-                overlay.classList.add('success-screen');
-                icon.innerText = "✨";
-            } else if (tipo === 'error') {
-                overlay.classList.add('error-screen');
-                icon.innerText = "🚫";
-            } else {
-                overlay.classList.add('warning-screen');
-                icon.innerText = "✋";
-            }
-
-            document.getElementById('result-title').innerText = titulo;
-            document.getElementById('result-name').innerText = nombre;
-            document.getElementById('result-msg').innerText = mensaje;
+            overlay.className = "fixed inset-0 flex flex-col items-center justify-center p-6 text-center z-50 text-white " + tipo;
+            icon.innerText = (tipo === "success") ? "✨" : (tipo === "warning" ? "✋" : "🚫");
+            
+            document.getElementById('title').innerText = titulo;
+            document.getElementById('name').innerText = nombre;
+            document.getElementById('msg').innerText = msg;
+            
             overlay.classList.remove('hidden');
         }
 
-        function cerrarOverlay() {
-            document.getElementById('result-overlay').classList.add('hidden');
-            isScanning = true;
-            if(html5QrcodeScanner) html5QrcodeScanner.resume();
+        function resetScanner() {
+            document.getElementById('overlay').classList.add('hidden');
+            escaneando = true;
+            if(scanner) scanner.resume();
         }
 
-        // Intento de marcar asistencia, aunque el backend viejo puede no soportarlo, 
-        // al menos el scanner valida visualmente.
-        async function registrarEntradaBackend(fila) {
-            try {
-                await fetch(`${APPS_SCRIPT_URL}?accion=marcar_asistencia&fila=${fila}`, {method: 'POST'});
-            } catch (e) {
-                console.log("Backend no soporta marca, o error de red.");
-            }
+        function iniciarCamara() {
+            scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            scanner.render(alLeerQR, (err)=>{});
         }
 
-        function iniciarScanner() {
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0, showTorchButtonIfSupported: true }, false);
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-        }
-
-        window.onload = cargarBaseDatos;
+        window.onload = descargarLista;
 
     </script>
 </body>
