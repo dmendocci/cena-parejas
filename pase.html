@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     
     <style>
+        /* --- TU DISEÑO ORIGINAL INTACTO --- */
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             background-color: #b71c1c;
@@ -48,7 +49,7 @@
             z-index: 10;
         }
 
-        /* QR: BAJADO AL 69% (Aprox 3 líneas más abajo) */
+        /* QR: POSICIÓN ORIGINAL */
         .qr-overlay {
             position: absolute;
             top: 69%; 
@@ -65,7 +66,6 @@
         #qrcode img {
             display: block;
         }
-
     </style>
 </head>
 <body>
@@ -76,35 +76,35 @@
     </div>
 
     <script>
-        // 1. Obtener parámetros de la URL
+        // 1. Obtener parámetros (URLSearchParams ya decodifica automáticamente)
         const params = new URLSearchParams(window.location.search);
         
-        const esposoRaw = params.get('esposo') || "Luis Alonso Lopez Caceres";
-        const esposaRaw = params.get('esposa') || "Maria Jose Ordoñez Andara";
+        // Obtenemos los nombres directamente (ya vienen con tildes si las traían)
+        const nombreEsposo = params.get('esposo') || "Luis Alonso Lopez Caceres";
+        const nombreEsposa = params.get('esposa') || "Maria Jose Ordoñez Andara";
 
-        const nombreEsposo = decodeURIComponent(esposoRaw);
-        const nombreEsposa = decodeURIComponent(esposaRaw);
-
-        // 2. MOSTRAR EN PANTALLA (Con tildes, ñ, ü, etc. intactos)
+        // 2. MOSTRAR EN PANTALLA (Se verán bonitos, con tildes)
         document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
-        // 3. FUNCIÓN DE LIMPIEZA TÉCNICA
-        // Convierte "Mónica" -> "Monica", "Güicho" -> "Guicho"
-        // Esto evita que la librería QR se rompa, pero no afecta lo visual.
+        // 3. FUNCIÓN DE LIMPIEZA TÉCNICA (El secreto para que el QR no falle)
+        // Convierte "Rosalía" en "Rosalia" solo para el generador QR
         function limpiarParaQR(texto) {
             if (!texto) return "";
             return texto
-                .normalize("NFD") // Separa letras de acentos (ej: ü se vuelve u + ¨)
-                .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos/diéresis
+                .normalize("NFD") // Separa la vocal de la tilde
+                .replace(/[\u0300-\u036f]/g, "") // Elimina la tilde
                 .trim();
         }
 
-        // 4. GENERAR QR SEGURO
-        // Usamos los nombres limpios SOLO para el código de barras
-        const textoSeguroQR = `REGISTRO: ${limpiarParaQR(nombreEsposo)} & ${limpiarParaQR(nombreEsposa)}`;
+        // Usamos la versión limpia para el texto del QR
+        const textoQR = `REGISTRO: ${limpiarParaQR(nombreEsposo)} & ${limpiarParaQR(nombreEsposa)}`;
 
+        // Limpiamos el contenedor por si acaso
+        document.getElementById("qrcode").innerHTML = "";
+
+        // Generamos el QR con el texto seguro
         new QRCode(document.getElementById("qrcode"), {
-            text: textoSeguroQR,
+            text: textoQR,
             width: 200,
             height: 200,
             colorDark : "#000000",
