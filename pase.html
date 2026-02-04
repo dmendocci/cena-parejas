@@ -2,97 +2,99 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pase de Entrada - Cena Parejas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Pase de Entrada</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+    
     <style>
-        body {
-            background: #fdf2f8; /* Fondo suave rosa */
-            background-image: url('https://www.transparenttextures.com/patterns/cubes.png');
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #b71c1c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; 
         }
-        .card {
-            background: white;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border-top: 5px solid #be185d; /* Rojo rosado */
+
+        .pass-container {
+            position: relative;
+            width: 100%;
+            max-width: 450px; 
+            aspect-ratio: 9 / 16; 
+            max-height: 100vh;
+            margin: 0 auto;
+            background-image: url('tarjeta.jpeg'); 
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
         }
-        .names {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #831843;
+
+        /* NOMBRES */
+        .names-overlay {
+            position: absolute;
+            top: 35%;  
+            left: 50%;
+            transform: translate(-50%, 0);
+            width: 90%;
+            text-align: center;
+            font-family: 'Great Vibes', cursive;
+            font-size: 2.2rem; 
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            line-height: 1.1;
+            z-index: 10;
         }
+
+        /* QR: BAJADO AL 69% (Aprox 3 líneas más abajo) */
+        .qr-overlay {
+            position: absolute;
+            top: 69%;  /* <--- AQUÍ ESTÁ EL CAMBIO */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            
+            background-color: white;
+            padding: 10px; 
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        #qrcode img {
+            display: block;
+        }
+
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body>
 
-    <div class="card w-full max-w-md rounded-xl p-8 text-center relative overflow-hidden">
-        <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-pink-100 opacity-50"></div>
-        <div class="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 rounded-full bg-pink-100 opacity-50"></div>
-
-        <div class="relative z-10">
-            <div class="mb-6">
-                <i class="fas fa-heart text-4xl text-pink-600 mb-2"></i>
-                <h1 class="text-sm uppercase tracking-widest text-gray-500 font-semibold">PASE DE ENTRADA</h1>
-                <h2 class="text-xs text-gray-400">Cena "Amor que Permanece"</h2>
-            </div>
-
-            <div class="mb-8">
-                <h1 id="esposo" class="names text-2xl font-bold leading-tight"></h1>
-                <div class="text-pink-300 my-1 text-xl">&</div>
-                <h1 id="esposa" class="names text-2xl font-bold leading-tight"></h1>
-            </div>
-
-            <div class="flex justify-center mb-6">
-                <div class="p-4 bg-white border-2 border-dashed border-pink-200 rounded-lg shadow-sm">
-                    <div id="qrcode"></div>
-                </div>
-            </div>
-
-            <p class="text-xs text-gray-400 mb-4">Presenta este código en la entrada</p>
-            <div class="text-xs font-bold text-pink-700 bg-pink-50 py-2 px-4 rounded-full inline-block">
-                📅 14 de Febrero • ⏰ 7:00 PM
-            </div>
-        </div>
+    <div class="pass-container">
+        <div class="names-overlay" id="displayNames"></div>
+        <div class="qr-overlay" id="qrcode"></div>
     </div>
 
     <script>
-        // Función para leer parámetros de la URL (decodificando tildes correctamente)
-        function getParameterByName(name) {
-            name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
-            var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
-            results = regex.exec(location.search);
-            return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
-        }
+        const params = new URLSearchParams(window.location.search);
+        
+        const esposo = params.get('esposo') || "Luis Alonso Lopez Caceres";
+        const esposa = params.get('esposa') || "Maria Jose Ordoñez Andara";
 
-        const esposo = getParameterByName('esposo') || "Nombre Él";
-        const esposa = getParameterByName('esposa') || "Nombre Ella";
+        const nombreEsposo = decodeURIComponent(esposo);
+        const nombreEsposa = decodeURIComponent(esposa);
 
-        // Mostrar nombres en pantalla
-        document.getElementById("esposo").innerText = esposo;
-        document.getElementById("esposa").innerText = esposa;
+        document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
-        // Texto que irá dentro del QR
-        // IMPORTANTE: Quitamos tildes para el QR para evitar problemas de lectura,
-        // aunque el "fixUTF8" de abajo las soporta, es más seguro normalizar.
-        // Pero si quieres mantenerlas, usa solo el texto original.
-        const textoQR = `${esposo} & ${esposa}`;
-
-        // === TRUCO PARA TILDES ===
-        // Esta función engaña al generador para que procese UTF-8 correctamente
-        function fixUTF8(str) {
-            return decodeURIComponent(encodeURIComponent(str));
-        }
-
-        // Generar QR
         new QRCode(document.getElementById("qrcode"), {
-            text: fixUTF8(textoQR), // <--- Aquí aplicamos el truco
-            width: 180,
-            height: 180,
-            colorDark : "#831843", // Color del QR (Rosado oscuro)
+            text: `REGISTRO: ${nombreEsposo} & ${nombreEsposa}`,
+            width: 200,
+            height: 200,
+            colorDark : "#000000",
             colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+            correctLevel : QRCode.CorrectLevel.M
         });
-
     </script>
+
 </body>
 </html>
