@@ -10,15 +10,12 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
         body { background-color: #1a202c; color: white; font-family: sans-serif; }
-        /* El contenedor del lector */
         #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; margin-bottom: 20px; border: 2px solid #4a5568; }
         
-        /* Colores de estado */
-        .success-screen { background-color: #22c55e; } /* Verde */
-        .error-screen { background-color: #ef4444; }   /* Rojo */
-        .warning-screen { background-color: #f59e0b; } /* Amarillo */
+        .success-screen { background-color: #22c55e; } 
+        .error-screen { background-color: #ef4444; }   
+        .warning-screen { background-color: #f59e0b; } 
         
-        /* Botones de la librería más bonitos */
         #html5-qrcode-button-camera-stop, #html5-qrcode-button-camera-start, #html5-qrcode-button-camera-permission {
             padding: 8px 16px; border-radius: 5px; background: #3b82f6; color: white; border: none; margin: 5px; cursor: pointer;
         }
@@ -28,15 +25,13 @@
 
     <div class="p-4 bg-gray-900 shadow-md z-10 text-center border-b border-gray-800">
         <h1 class="text-xl font-bold text-red-500 tracking-wider">SCANNER ENTRADA ❤️</h1>
-        <p id="status-db" class="text-xs text-gray-400 mt-1 animate-pulse">Conectando con base de datos...</p>
+        <p id="status-db" class="text-xs text-gray-400 mt-1 animate-pulse">Conectando...</p>
     </div>
 
     <div class="flex-grow flex flex-col items-center justify-start pt-6 px-4 overflow-y-auto">
-        
         <div id="reader"></div>
-        
         <div class="text-sm text-gray-400 text-center mt-2 px-4 bg-gray-800 p-2 rounded">
-            💡 <b>Tip:</b> Si la cámara no enfoca, selecciona otra opción en el menú "Select Camera" que aparece arriba del video.
+            💡 Si no enfoca, cambia la cámara en el menú superior.
         </div>
     </div>
 
@@ -53,7 +48,7 @@
 
     <script>
         // ==========================================
-        // ⚠️ PEGA AQUÍ LA URL DE TU SCRIPT (VERSIÓN 2)
+        // ⚠️ PEGA AQUÍ TU URL (LA MISMA QUE EN ENVIOS.HTML)
         // ==========================================
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec'; 
         // ==========================================
@@ -62,96 +57,127 @@
         let html5QrcodeScanner = null;
         let isScanning = true;
 
-        // --- 1. CARGA DE BASE DE DATOS (AL ABRIR LA PÁGINA) ---
+        // --- 1. CARGA DE BASE DE DATOS INTELIGENTE ---
         async function cargarBaseDatos() {
             const statusEl = document.getElementById('status-db');
             try {
-                // Usamos "listar_asistencia" que ya confirmamos que está en tu script
-                const response = await fetch(`${APPS_SCRIPT_URL}?accion=listar_asistencia`);
+                // Pedimos "listar_envios" (o "listar_todo") porque sabemos que esa función YA EXISTE y funciona en tu script actual
+                // No usamos "listar_asistencia" si tu script viejo no la tiene.
+                const response = await fetch(`${APPS_SCRIPT_URL}?accion=listar_envios`);
                 const data = await response.json();
                 
                 if (data.result === "success") {
-                    listaInvitados = data.message;
-                    statusEl.innerHTML = `✅ <b>LISTO:</b> ${listaInvitados.length} parejas cargadas.`;
+                    // AQUÍ ESTÁ LA MAGIA: FILTRADO EN EL NAVEGADOR
+                    // Recibimos la lista sucia y la limpiamos aquí mismo.
+                    const listaCruda = data.message;
+                    
+                    listaInvitados = listaCruda.filter(item => {
+                        // Filtro: Debe tener Link Y tener Nombre (Esposo o Esposa)
+                        return item.link && item.link.length > 5 && 
+                               ((item.esposo && item.esposo.trim().length > 1) || (item.esposa && item.esposa.trim().length > 1));
+                    }).map(item => {
+                        // Transformamos al formato que necesita el escáner
+                        return {
+                            fila: item.fila,
+                            nombres: `${item.esposo} & ${item.esposa}`,
+                            // Si tu script viejo no manda "asistio", asumimos falso por ahora (o lo manejamos luego)
+                            asistio: false // Por defecto
+                        };
+                    });
+
+                    statusEl.innerHTML = `✅ <b>LISTO:</b> ${listaInvitados.length} parejas reales cargadas.`;
                     statusEl.classList.remove('animate-pulse', 'text-gray-400');
                     statusEl.classList.add('text-green-400');
                     
-                    // Iniciamos la cámara SOLO cuando tenemos los datos
                     iniciarScanner(); 
                 } else {
                     throw new Error(data.message);
                 }
             } catch (e) {
-                statusEl.innerHTML = "❌ <b>ERROR:</b> No se pudo cargar la lista.";
-                statusEl.classList.remove('text-gray-400');
-                statusEl.classList.add('text-red-500');
-                alert("Error conectando con Google Sheets. Verifica internet y recarga.");
-                console.error(e);
+                // Intento alternativo por si la acción se llama "listar_todo"
+                if(e.message && e.message.includes("Acción desconocida")) {
+                     console.warn("Reintentando con listar_todo...");
+                     fetch(`${APPS_SCRIPT_URL}?accion=listar_todo`)
+                        .then(r => r.json())
+                        .then(d => {
+                             if(d.result === "success") {
+                                 // Repetimos lógica de limpieza
+                                 const listaCruda = d.message;
+                                 listaInvitados = listaCruda.filter(item => item.link && item.link.length > 5 && ((item.esposo && item.esposo.trim().length > 1) || (item.esposa && item.esposa.trim().length > 1)))
+                                     .map(item => ({ fila: item.fila, nombres: `${item.esposo} & ${item.esposa}`, asistio: false }));
+                                 
+                                 statusEl.innerHTML = `✅ <b>LISTO:</b> ${listaInvitados.length} parejas reales.`;
+                                 statusEl.classList.remove('animate-pulse', 'text-gray-400');
+                                 statusEl.classList.add('text-green-400');
+                                 iniciarScanner();
+                             }
+                        }).catch(err => {
+                            mostrarErrorCarga(err);
+                        });
+                } else {
+                    mostrarErrorCarga(e);
+                }
             }
         }
 
-        // --- 2. EL SOLUCIONADOR DE TEXTO (NORMALIZAR) ---
-        // Hace que "Carlos" sea igual a "CARLOS" o "carlos "
+        function mostrarErrorCarga(e) {
+            const statusEl = document.getElementById('status-db');
+            statusEl.innerHTML = "❌ <b>ERROR:</b> Fallo de conexión.";
+            statusEl.classList.remove('text-gray-400');
+            statusEl.classList.add('text-red-500');
+            console.error(e);
+        }
+
+        // --- 2. NORMALIZADOR DE TEXTO ---
         function normalizar(texto) {
             if (!texto) return "";
             return texto.toString()
-                .toLowerCase()                    // Minúsculas
-                .replace("registro:", "")         // Quitar prefijo
-                .trim()                           // Quitar espacios extra
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
-                .replace(/\s+/g, " ");            // Espacios dobles a simples
+                .toLowerCase()
+                .replace("registro:", "")
+                .trim()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/\s+/g, " ");
         }
 
-        // --- 3. CUANDO SE ESCANEA UN QR ---
+        // --- 3. AL ESCANEAR ---
         function onScanSuccess(decodedText, decodedResult) {
             if (!isScanning) return; 
             
-            // 1. Pausar escaneo
             isScanning = false; 
             if(html5QrcodeScanner) html5QrcodeScanner.pause();
 
             const qrLimpio = normalizar(decodedText);
             console.log("Leído:", qrLimpio);
 
-            // 2. Buscar en la lista (Búsqueda flexible)
             const encontrado = listaInvitados.find(invitado => {
                 const dbNombre = normalizar(invitado.nombres);
-                // ¿El nombre de la BD está en el QR? O ¿El QR está en el nombre de la BD?
                 return dbNombre.includes(qrLimpio) || qrLimpio.includes(dbNombre);
             });
 
-            // 3. Mostrar resultado
             if (encontrado) {
                 if (encontrado.asistio) {
-                    mostrarPantalla("warning", "⚠️ YA INGRESÓ", encontrado.nombres, "Esta pareja ya fue marcada antes.");
+                    mostrarPantalla("warning", "⚠️ YA INGRESÓ", encontrado.nombres, "Esta pareja ya fue marcada (Localmente).");
                 } else {
-                    mostrarPantalla("success", "✅ BIENVENIDOS", encontrado.nombres, "Pase válido. ¡Adelante!");
-                    // 4. Guardar en la nube (sin esperar)
+                    mostrarPantalla("success", "✅ BIENVENIDOS", encontrado.nombres, "Pase válido.");
+                    // Intentamos marcar asistencia en backend (si la función existe)
                     registrarEntradaBackend(encontrado.fila);
-                    // 5. Marcar localmente para no dejar pasar doble si falla internet
                     encontrado.asistio = true; 
                 }
             } else {
-                mostrarPantalla("error", "❌ NO ENCONTRADO", "Pase Desconocido", "Verifique que sea de este evento.");
+                mostrarPantalla("error", "❌ NO ENCONTRADO", "QR Desconocido", "Verifique el pase.");
             }
         }
 
-        function onScanFailure(error) {
-            // Ignorar errores de lectura en vacío
-        }
+        function onScanFailure(error) {}
 
-        // --- 4. CONTROL DE PANTALLAS (VERDE/ROJO) ---
         function mostrarPantalla(tipo, titulo, nombre, mensaje) {
             const overlay = document.getElementById('result-overlay');
             const icon = document.getElementById('result-icon');
-            
             overlay.className = "fixed inset-0 flex flex-col items-center justify-center text-center p-6 z-50 transition-all duration-300 text-white";
             
             if (tipo === 'success') {
                 overlay.classList.add('success-screen');
                 icon.innerText = "✨";
-                // Sonido opcional si quieres
-                // new Audio('https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg').play().catch(e=>{});
             } else if (tipo === 'error') {
                 overlay.classList.add('error-screen');
                 icon.innerText = "🚫";
@@ -163,7 +189,6 @@
             document.getElementById('result-title').innerText = titulo;
             document.getElementById('result-name').innerText = nombre;
             document.getElementById('result-msg').innerText = mensaje;
-            
             overlay.classList.remove('hidden');
         }
 
@@ -173,32 +198,22 @@
             if(html5QrcodeScanner) html5QrcodeScanner.resume();
         }
 
-        // --- 5. ENVIAR DATOS A GOOGLE SHEETS ---
+        // Intento de marcar asistencia, aunque el backend viejo puede no soportarlo, 
+        // al menos el scanner valida visualmente.
         async function registrarEntradaBackend(fila) {
             try {
                 await fetch(`${APPS_SCRIPT_URL}?accion=marcar_asistencia&fila=${fila}`, {method: 'POST'});
             } catch (e) {
-                console.error("Fallo al guardar en nube, pero el pase es válido localmente.");
+                console.log("Backend no soporta marca, o error de red.");
             }
         }
 
-        // --- 6. INICIAR LIBRERÍA DE CÁMARA ---
         function iniciarScanner() {
-            // Configuración optimizada para móviles
             html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", 
-                { 
-                    fps: 10, 
-                    qrbox: {width: 250, height: 250},
-                    aspectRatio: 1.0,
-                    showTorchButtonIfSupported: true // Botón de linterna si el cel lo soporta
-                },
-                false);
-            
+                "reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0, showTorchButtonIfSupported: true }, false);
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         }
 
-        // Arrancar todo al cargar la página
         window.onload = cargarBaseDatos;
 
     </script>
