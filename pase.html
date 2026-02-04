@@ -51,7 +51,7 @@
         /* QR: BAJADO AL 69% (Aprox 3 líneas más abajo) */
         .qr-overlay {
             position: absolute;
-            top: 69%;  /* <--- AQUÍ ESTÁ EL CAMBIO */
+            top: 69%; 
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 10;
@@ -76,18 +76,35 @@
     </div>
 
     <script>
+        // 1. Obtener parámetros de la URL
         const params = new URLSearchParams(window.location.search);
         
-        const esposo = params.get('esposo') || "Luis Alonso Lopez Caceres";
-        const esposa = params.get('esposa') || "Maria Jose Ordoñez Andara";
+        const esposoRaw = params.get('esposo') || "Luis Alonso Lopez Caceres";
+        const esposaRaw = params.get('esposa') || "Maria Jose Ordoñez Andara";
 
-        const nombreEsposo = decodeURIComponent(esposo);
-        const nombreEsposa = decodeURIComponent(esposa);
+        const nombreEsposo = decodeURIComponent(esposoRaw);
+        const nombreEsposa = decodeURIComponent(esposaRaw);
 
+        // 2. MOSTRAR EN PANTALLA (Con tildes, ñ, ü, etc. intactos)
         document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
+        // 3. FUNCIÓN DE LIMPIEZA TÉCNICA
+        // Convierte "Mónica" -> "Monica", "Güicho" -> "Guicho"
+        // Esto evita que la librería QR se rompa, pero no afecta lo visual.
+        function limpiarParaQR(texto) {
+            if (!texto) return "";
+            return texto
+                .normalize("NFD") // Separa letras de acentos (ej: ü se vuelve u + ¨)
+                .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos/diéresis
+                .trim();
+        }
+
+        // 4. GENERAR QR SEGURO
+        // Usamos los nombres limpios SOLO para el código de barras
+        const textoSeguroQR = `REGISTRO: ${limpiarParaQR(nombreEsposo)} & ${limpiarParaQR(nombreEsposa)}`;
+
         new QRCode(document.getElementById("qrcode"), {
-            text: `REGISTRO: ${nombreEsposo} & ${nombreEsposa}`,
+            text: textoSeguroQR,
             width: 200,
             height: 200,
             colorDark : "#000000",
