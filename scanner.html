@@ -21,7 +21,7 @@
 
     <div class="p-4 text-center bg-gray-900">
         <p id="status-db" class="text-sm text-gray-400 animate-pulse">⏳ Conectando con base de datos...</p>
-        <p class="text-xs text-gray-600 mt-1">Modo: Filtrado Inteligente</p>
+        <p class="text-xs text-gray-600 mt-1">Modo: Solo con QR Válido</p>
     </div>
 
     <div id="overlay" class="fixed inset-0 hidden flex flex-col items-center justify-center p-6 text-center z-50 text-white">
@@ -34,7 +34,7 @@
 
     <script>
         // ==========================================
-        // ⚠️ PEGA AQUÍ LA URL DE TU SCRIPT (VERSIÓN 2 FEB)
+        // ⚠️ PEGA AQUÍ LA URL DE TU SCRIPT
         // ==========================================
         const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec'; 
         // ==========================================
@@ -46,34 +46,28 @@
         async function iniciarSistema() {
             const status = document.getElementById('status-db');
             try {
-                // Pedimos "listar_todo" o "listar_envios" (lo que tenga tu script viejo)
-                // NO pedimos listar_asistencia porque tu script viejo no la tiene
+                // Pedimos los datos al script viejo
                 const resp = await fetch(`${URL_SCRIPT}?accion=listar_todo`);
                 const json = await resp.json();
                 
                 if (json.result === "success") {
-                    // AQUÍ OCURRE LA MAGIA: LIMPIEZA EN EL TELÉFONO
-                    // Filtramos la basura que manda el script viejo
+                    const listaCruda = json.message;
                     
-                    const listaSucia = json.message;
-                    
-                    invitados = listaSucia.filter(item => {
-                        // REGLA DE LIMPIEZA:
-                        // 1. Debe tener un LINK generado (item.link)
-                        // 2. Ese link no debe estar vacío
-                        // 3. Debe tener al menos un nombre (esposo o esposa)
-                        return item.link && item.link.length > 10 && 
+                    // === AQUÍ ESTÁ EL FILTRO QUE PIDES ===
+                    invitados = listaCruda.filter(item => {
+                        // CONDICIÓN 1: Que tenga un LINK (QR generado)
+                        // CONDICIÓN 2: Que el link no sea texto vacío
+                        // CONDICIÓN 3: Que tenga nombres
+                        return item.link && item.link.trim() !== "" && 
                                ((item.esposo && item.esposo.length > 1) || (item.esposa && item.esposa.length > 1));
                     }).map(p => ({
-                        // Preparamos los datos para búsqueda rápida
                         busqueda: normalizar(p.esposo + " " + p.esposa),
                         nombreMostar: `${p.esposo} & ${p.esposa}`,
                         fila: p.fila,
-                        // El script viejo no manda campo 'asistio', así que empezamos en false
                         yaEntro: false 
                     }));
 
-                    status.innerHTML = `✅ <b>LISTO:</b> ${invitados.length} parejas cargadas.`;
+                    status.innerHTML = `✅ <b>LISTO:</b> ${invitados.length} parejas con QR.`;
                     status.className = "text-sm text-green-400 font-bold p-4 bg-gray-900";
                     
                     configurarCamara();
@@ -82,21 +76,20 @@
                     status.className = "text-sm text-red-500 font-bold p-4";
                 }
             } catch (e) {
-                // Si falla, intentamos con 'listar_envios' por si acaso el nombre es distinto
-                console.log("Reintentando...");
+                // Reintento de seguridad
+                console.log("Reintentando con listar_envios...");
                 fetch(`${URL_SCRIPT}?accion=listar_envios`)
                     .then(r => r.json())
                     .then(d => {
                         if(d.result === "success") {
-                            const listaSucia = d.message;
-                            invitados = listaSucia.filter(item => item.link && item.link.length > 10 && ((item.esposo && item.esposo.length > 1) || (item.esposa && item.esposa.length > 1)))
+                            invitados = d.message.filter(item => item.link && item.link.trim() !== "" && ((item.esposo && item.esposo.length > 1) || (item.esposa && item.esposa.length > 1)))
                                 .map(p => ({ busqueda: normalizar(p.esposo + " " + p.esposa), nombreMostar: `${p.esposo} & ${p.esposa}`, fila: p.fila, yaEntro: false }));
-                            status.innerHTML = `✅ <b>LISTO:</b> ${invitados.length} parejas cargadas.`;
+                            status.innerHTML = `✅ <b>LISTO:</b> ${invitados.length} parejas con QR.`;
                             status.className = "text-sm text-green-400 font-bold p-4 bg-gray-900";
                             configurarCamara();
                         }
                     }).catch(err => {
-                        status.innerHTML = "❌ Error de conexión. Revisa internet.";
+                        status.innerHTML = "❌ Error de conexión.";
                     });
             }
         }
@@ -130,9 +123,8 @@
                 } else {
                     mostrarResultado("success", "✅ BIENVENIDOS", encontrado.nombreMostar, "Pase autorizado.");
                     encontrado.yaEntro = true;
-                    // Intentamos marcar en el server, si falla no importa, ya entró.
-                    // Nota: Si el script viejo no tiene 'marcar_asistencia', esto dará error 404 en consola pero el usuario verá VERDE igual.
-                    fetch(`${URL_SCRIPT}?accion=marcar_asistencia&fila=${encontrado.fila}`, {method: 'POST'}).catch(e => console.log("Backend no soporta marca"));
+                    // Intentamos marcar en servidor (si falla, no importa)
+                    fetch(`${URL_SCRIPT}?accion=marcar_asistencia&fila=${encontrado.fila}`, {method: 'POST'}).catch(e=>{});
                 }
             } else {
                 mostrarResultado("error", "🚫 NO ENCONTRADO", "QR Desconocido", "Verifique que sea de este evento.");
