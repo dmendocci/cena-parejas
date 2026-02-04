@@ -12,14 +12,22 @@
         button { transition: all 0.2s; }
         button:active { transform: scale(0.95); }
         
-        /* ESTILO FORZADO PARA BOTONES DE RECORDATORIO */
+        /* ESTILO FORZADO PARA BOTONES ROJOS */
         .btn-recordatorio {
-            background-color: #dc2626 !important; /* Rojo fuerte */
+            background-color: #dc2626 !important; 
             color: white !important;
             border: 1px solid #b91c1c !important;
         }
         .btn-recordatorio:hover {
-            background-color: #b91c1c !important; /* Más oscuro al pasar mouse */
+            background-color: #b91c1c !important;
+        }
+        /* ESTILO PARA BOTÓN DESACTIVADO (YA ENVIADO) */
+        .btn-enviado {
+            background-color: #9ca3af !important; /* Gris */
+            color: white !important;
+            cursor: not-allowed !important;
+            border: 1px solid #6b7280 !important;
+            transform: none !important;
         }
     </style>
 </head>
@@ -108,6 +116,8 @@
 
     <script>
         let datosGlobales = [];
+        // Objeto para recordar a quién ya le enviamos mensaje EN ESTA SESIÓN antes de recargar
+        let estadoEnvios = {}; 
 
         function obtenerLinkWhatsApp(telefono, mensaje) {
             const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -130,6 +140,8 @@
                 
                 if (data.result === "success") {
                     datosGlobales = data.message;
+                    // Limpiamos estado al recargar datos frescos
+                    estadoEnvios = {}; 
                     filtrarTabla();
                 } else {
                     // INTENTO RESPALDO
@@ -137,6 +149,7 @@
                      const data2 = await response2.json();
                      if(data2.result === "success") {
                          datosGlobales = data2.message;
+                         estadoEnvios = {};
                          filtrarTabla();
                      } else {
                         alert("⚠️ Error: " + data.message);
@@ -202,13 +215,13 @@
                     htmlAcciones += `<div class="flex justify-center gap-2">`;
                     
                     let yaEnviadoO = item.notifStatus && item.notifStatus.includes("o");
-                    let btnClass1 = yaEnviadoO ? "bg-gray-200 text-gray-500 cursor-default border border-gray-300" : "bg-green-600 text-white hover:bg-green-700 shadow";
+                    let btnClass1 = yaEnviadoO ? "btn-enviado" : "bg-green-600 text-white hover:bg-green-700 shadow";
                     let icon1 = yaEnviadoO ? '<i class="fas fa-check-double"></i>' : '<i class="fab fa-whatsapp"></i>';
                     let label1 = yaEnviadoO ? "Enviado" : "Enviar a Él";
                     htmlAcciones += `<button onclick="enviarQR(${item.fila}, '${item.tel1}', '${item.esposo}', '${item.qrUrl || item.link}', 'esposo')" class="${btnClass1} px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">${icon1} ${label1}</button>`;
 
                     let yaEnviadoA = item.notifStatus && item.notifStatus.includes("a");
-                    let btnClass2 = yaEnviadoA ? "bg-gray-200 text-gray-500 cursor-default border border-gray-300" : "bg-green-600 text-white hover:bg-green-700 shadow";
+                    let btnClass2 = yaEnviadoA ? "btn-enviado" : "bg-green-600 text-white hover:bg-green-700 shadow";
                     let icon2 = yaEnviadoA ? '<i class="fas fa-check-double"></i>' : '<i class="fab fa-whatsapp"></i>';
                     let label2 = yaEnviadoA ? "Enviado" : "Enviar a Ella";
                     htmlAcciones += `<button onclick="enviarQR(${item.fila}, '${item.tel2}', '${item.esposa}', '${item.qrUrl || item.link}', 'esposa')" class="${btnClass2} px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">${icon2} ${label2}</button>`;
@@ -221,19 +234,20 @@
                     let indiceMensaje = intentos >= MENSAJES_PAGO.length ? MENSAJES_PAGO.length - 1 : intentos;
                     let tituloMensaje = ["Estándar", "Entusiasta", "Logístico", "Breve", "Último"][indiceMensaje];
 
-                    // Aquí aplicamos la clase 'btn-recordatorio' que forzamos en CSS
+                    // Botones Rojos
+                    // Agregamos 'this' en el onclick para poder desactivar el botón visualmente al instante
                     htmlAcciones += `
                     <div class="flex flex-col items-center bg-gray-50 p-2 rounded border border-gray-200">
-                        <span class="text-red-800 font-bold text-[10px] uppercase mb-2 tracking-wide">
+                        <span class="text-red-800 font-bold text-[9px] uppercase mb-2 tracking-wide">
                             <i class="fas fa-bell"></i> RECORDAR PAGO
                         </span>
                         
                         <div class="flex gap-2 mb-2">
-                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel1}', '${item.esposo}', ${intentos}, 'esposo')" 
+                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel1}', '${item.esposo}', ${intentos}, 'esposo', this)" 
                                     class="btn-recordatorio px-4 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1 transition">
                                 <i class="fas fa-male"></i> Él
                             </button>
-                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel2}', '${item.esposa}', ${intentos}, 'esposa')" 
+                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel2}', '${item.esposa}', ${intentos}, 'esposa', this)" 
                                     class="btn-recordatorio px-4 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1 transition">
                                 <i class="fas fa-female"></i> Ella
                             </button>
@@ -289,8 +303,10 @@
                 .then(() => { setTimeout(cargarDatos, 2000); }); 
         }
 
-        function enviarRecordatorio(fila, telefono, nombre, intentosPrevios, rol) {
+        function enviarRecordatorio(fila, telefono, nombre, intentosPrevios, rol, btnElement) {
             if(!telefono || telefono.length < 5) { alert("⚠️ Teléfono inválido para " + nombre); return; }
+            
+            // 1. Mensaje de WhatsApp
             let indice = intentosPrevios >= MENSAJES_PAGO.length ? MENSAJES_PAGO.length - 1 : intentosPrevios;
             let plantilla = MENSAJES_PAGO[indice];
             let mensajeFinal = plantilla.replace("[Nombre de pareja]", nombre).replace("[NOMBRE]", nombre);
@@ -298,8 +314,33 @@
             let urlWA = obtenerLinkWhatsApp(telefono, mensajeFinal);
             window.open(urlWA, '_blank');
             
-            fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, { method: 'POST' })
-                .then(() => { setTimeout(cargarDatos, 2000); });
+            // 2. Actualización Visual Inmediata (Feedback)
+            // Quitamos la clase roja y ponemos la gris de "Enviado"
+            btnElement.classList.remove("btn-recordatorio");
+            btnElement.classList.add("btn-enviado");
+            btnElement.innerHTML = '<i class="fas fa-check"></i> Enviado';
+            btnElement.disabled = true;
+
+            // 3. Lógica de Memoria y Servidor
+            if (!estadoEnvios[fila]) {
+                estadoEnvios[fila] = { esposo: false, esposa: false };
+            }
+            estadoEnvios[fila][rol] = true;
+
+            // 4. SOLO incrementamos el servidor si AMBOS han sido enviados
+            if (estadoEnvios[fila].esposo && estadoEnvios[fila].esposa) {
+                console.log("Ambos enviados. Incrementando contador en servidor...");
+                fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, { method: 'POST' })
+                    .then(() => { 
+                        // Limpiamos el estado de esta fila para el futuro
+                        delete estadoEnvios[fila];
+                        // Recargamos para ver el nuevo nivel de intentos (ej. de 1/5 pasa a 2/5)
+                        setTimeout(cargarDatos, 1000); 
+                    });
+            } else {
+                console.log("Solo uno enviado. Esperando al otro para incrementar.");
+                // NO recargamos datos todavía para no perder el botón gris que acabamos de poner
+            }
         }
 
         function mostrarLoader(show) { document.getElementById("loader").classList.toggle("hidden", !show); }
