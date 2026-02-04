@@ -7,146 +7,153 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
-        body { background-color: #1a202c; color: white; }
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; }
+        body { background-color: #1a202c; color: white; font-family: sans-serif; }
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; margin-bottom: 20px; }
+        
+        /* Pantallas de resultados */
         .success-screen { background-color: #22c55e; } /* Verde */
         .error-screen { background-color: #ef4444; }   /* Rojo */
         .warning-screen { background-color: #f59e0b; } /* Amarillo */
+        
+        /* Ajuste del botón de la librería */
+        #html5-qrcode-button-camera-stop, #html5-qrcode-button-camera-start {
+            padding: 10px 20px; border-radius: 5px; background: #3b82f6; color: white; border: none; margin: 5px;
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
-    <div class="p-4 bg-gray-900 shadow-md z-10">
-        <h1 class="text-xl font-bold text-center text-red-500">Scanner Entrada ❤️</h1>
-        <p id="status-db" class="text-xs text-center text-gray-400 mt-1">Cargando base de datos...</p>
+    <div class="p-4 bg-gray-900 shadow-md z-10 text-center">
+        <h1 class="text-xl font-bold text-red-500">Scanner Entrada ❤️</h1>
+        <p id="status-db" class="text-xs text-gray-400 mt-1 animate-pulse">Cargando lista de invitados...</p>
     </div>
 
-    <div class="flex-grow flex flex-col items-center justify-start pt-4 px-4">
-        <div id="reader" class="shadow-2xl border-4 border-gray-700"></div>
+    <div class="flex-grow flex flex-col items-center justify-start pt-4 px-4 overflow-y-auto">
         
-        <button onclick="reiniciarScanner()" class="mt-4 text-xs text-gray-400 underline">
-            ¿Problemas con la cámara? Toca aquí
-        </button>
+        <div id="reader"></div>
+        
+        <div class="text-xs text-gray-500 text-center mt-2 px-4">
+            Si no lee bien, selecciona otra cámara en el menú de arriba ("Select Camera").
+        </div>
     </div>
 
     <div id="result-overlay" class="fixed inset-0 hidden flex flex-col items-center justify-center text-center p-6 z-50">
-        <div id="result-icon" class="text-8xl mb-4">✅</div>
-        <h2 id="result-title" class="text-4xl font-bold mb-2">BIENVENIDOS</h2>
-        <p id="result-name" class="text-2xl font-semibold">Carlos & María</p>
-        <p id="result-msg" class="mt-4 text-lg opacity-90">Registro Confirmado</p>
+        <div id="result-icon" class="text-8xl mb-4 font-bold"></div>
+        <h2 id="result-title" class="text-4xl font-bold mb-2 uppercase drop-shadow-md"></h2>
+        <p id="result-name" class="text-2xl font-semibold drop-shadow-sm text-white"></p>
+        <p id="result-msg" class="mt-4 text-lg opacity-90 text-white"></p>
         
-        <button onclick="cerrarOverlay()" class="mt-10 bg-white text-gray-800 font-bold py-3 px-10 rounded-full shadow-lg text-xl">
-            Siguiente Pareja
+        <button onclick="cerrarOverlay()" class="mt-10 bg-white text-gray-900 font-bold py-4 px-10 rounded-full shadow-xl text-xl hover:scale-105 transition-transform">
+            Escanear Siguiente
         </button>
     </div>
 
     <script>
-        // --- CONFIGURACIÓN ---
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec'; // <--- ¡PEGA TU URL AQUÍ!
+        // ==========================================
+        // ⚙️ CONFIGURACIÓN - PEGA TU URL AQUÍ
+        // ==========================================
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec'; 
+        // ==========================================
 
         let listaInvitados = [];
         let html5QrcodeScanner = null;
         let isScanning = true;
 
-        // --- 1. CARGA DE DATOS ---
+        // --- 1. CARGA DE BASE DE DATOS ---
         async function cargarBaseDatos() {
             const statusEl = document.getElementById('status-db');
             try {
+                // Forzamos "accion=listar_asistencia" que ya existe en tu script recuperado
                 const response = await fetch(`${APPS_SCRIPT_URL}?accion=listar_asistencia`);
                 const data = await response.json();
                 
                 if (data.result === "success") {
                     listaInvitados = data.message;
-                    statusEl.innerText = `Base de datos lista: ${listaInvitados.length} parejas.`;
-                    statusEl.classList.remove('text-red-400');
-                    statusEl.classList.add('text-green-400');
+                    statusEl.innerText = `✅ Lista cargada: ${listaInvitados.length} parejas.`;
+                    statusEl.classList.remove('animate-pulse', 'text-gray-400');
+                    statusEl.classList.add('text-green-400', 'font-bold');
+                    iniciarScanner(); // Iniciamos cámara solo cuando hay datos
                 } else {
                     throw new Error(data.message);
                 }
             } catch (e) {
-                statusEl.innerText = "Error cargando lista. Revisa internet.";
-                statusEl.classList.add('text-red-400');
-                console.error(e);
+                statusEl.innerText = "❌ Error cargando lista. Recarga la página.";
+                statusEl.classList.remove('text-gray-400');
+                statusEl.classList.add('text-red-500');
+                alert("Error de conexión con Google Sheets: " + e.message);
             }
         }
 
-        // --- 2. LÓGICA DE NORMALIZACIÓN (EL SECRETO) ---
-        // Esto quita acentos, "REGISTRO:", espacios extra y pasa a minúsculas
+        // --- 2. EL CEREBRO: NORMALIZADOR DE TEXTO ---
+        // Esto soluciona el "Pase no encontrado"
         function normalizar(texto) {
             if (!texto) return "";
             return texto.toString()
-                .toLowerCase()
-                .replace("registro:", "") // Quitamos el prefijo del QR
-                .trim()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes (á -> a)
-                .replace(/\s+/g, " "); // Convierte dobles espacios en uno
+                .toLowerCase() // Todo a minúsculas
+                .replace("registro:", "") // Quitamos la palabra clave del QR
+                .trim() // Quitamos espacios al inicio y final
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitamos tildes (á -> a)
+                .replace(/\s+/g, " "); // Quitamos espacios dobles
         }
 
-        // --- 3. PROCESAR QR ESCANEADO ---
+        // --- 3. LÓGICA DE ESCANEO ---
         function onScanSuccess(decodedText, decodedResult) {
-            if (!isScanning) return; // Evitar lecturas dobles rápidas
-
-            // 1. Detener escaneo momentáneo
+            if (!isScanning) return; // Evitar disparos múltiples
+            
+            // Pausamos visualmente
             isScanning = false; 
             if(html5QrcodeScanner) html5QrcodeScanner.pause();
 
+            console.log("QR Crudo:", decodedText);
             const qrLimpio = normalizar(decodedText);
-            console.log("Escaneado (Raw):", decodedText);
-            console.log("Escaneado (Limpio):", qrLimpio);
+            console.log("QR Limpio:", qrLimpio);
 
-            // 2. BUSCAR EN LA LISTA
-            // Buscamos si el string del QR está contenido en el nombre o viceversa
+            // Búsqueda Inteligente
             const encontrado = listaInvitados.find(invitado => {
                 const dbNombre = normalizar(invitado.nombres);
-                // Coincidencia flexible:
+                // Verificamos si el QR contiene el nombre de la BD o viceversa
                 return dbNombre.includes(qrLimpio) || qrLimpio.includes(dbNombre);
             });
 
-            // 3. MOSTRAR RESULTADO
             if (encontrado) {
                 if (encontrado.asistio) {
-                    mostrarPantalla("warning", "YA INGRESÓ", encontrado.nombres, "Esta pareja ya fue marcada antes.");
+                    mostrarPantalla("warning", "⚠️ YA INGRESÓ", encontrado.nombres, "Esta pareja ya fue marcada anteriormente.");
                 } else {
-                    mostrarPantalla("success", "BIENVENIDOS", encontrado.nombres, "Pase Válido");
-                    registrarEntradaBackend(encontrado.fila); // Guardar en Google Sheets
-                    encontrado.asistio = true; // Actualizar localmente para no dejar pasar doble
+                    mostrarPantalla("success", "✅ BIENVENIDOS", encontrado.nombres, "Registro Exitoso. ¡Disfruten la noche!");
+                    registrarEntradaBackend(encontrado.fila);
+                    encontrado.asistio = true; // Actualizamos memoria local para no dejar pasar doble
                 }
             } else {
-                mostrarPantalla("error", "NO ENCONTRADO", "QR: " + decodedText, "Verifique que sea de este evento.");
+                mostrarPantalla("error", "❌ NO ENCONTRADO", "QR Inválido", "Verifique que sea el pase correcto de este evento.");
             }
         }
 
         function onScanFailure(error) {
-            // Ruido normal del escáner, no hacer nada
+            // No hacemos nada, es ruido normal mientras busca QRs
         }
 
-        // --- UI DEL RESULTADO ---
+        // --- 4. INTERFAZ GRÁFICA (OVERLAY) ---
         function mostrarPantalla(tipo, titulo, nombre, mensaje) {
             const overlay = document.getElementById('result-overlay');
             const icon = document.getElementById('result-icon');
             
-            overlay.className = "fixed inset-0 flex flex-col items-center justify-center text-center p-6 z-50 text-white";
+            // Reseteamos clases de color
+            overlay.classList.remove('success-screen', 'error-screen', 'warning-screen', 'hidden');
             
             if (tipo === 'success') {
                 overlay.classList.add('success-screen');
-                icon.innerText = "✅";
-                // Sonido de éxito (opcional)
-                new Audio('https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg').play().catch(e=>{});
+                icon.innerText = "✨";
             } else if (tipo === 'error') {
                 overlay.classList.add('error-screen');
-                icon.innerText = "❌";
-                // Sonido de error
-                new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e=>{});
-            } else { // Warning
+                icon.innerText = "🚫";
+            } else { // warning
                 overlay.classList.add('warning-screen');
-                icon.innerText = "⚠️";
+                icon.innerText = "✋";
             }
 
             document.getElementById('result-title').innerText = titulo;
             document.getElementById('result-name').innerText = nombre;
             document.getElementById('result-msg').innerText = mensaje;
-            
-            overlay.classList.remove('hidden');
         }
 
         function cerrarOverlay() {
@@ -155,33 +162,32 @@
             if(html5QrcodeScanner) html5QrcodeScanner.resume();
         }
 
+        // --- 5. GUARDAR EN GOOGLE SHEETS ---
         async function registrarEntradaBackend(fila) {
             try {
+                // Llamamos a la función marcar_asistencia de tu script
                 await fetch(`${APPS_SCRIPT_URL}?accion=marcar_asistencia&fila=${fila}`, {method: 'POST'});
+                console.log("Asistencia guardada en nube.");
             } catch (e) {
-                console.error("No se pudo guardar online (pero ya entró localmente)", e);
+                console.error("Error guardando en nube (pero ya entró localmente)", e);
             }
         }
 
-        // --- INICIALIZACIÓN DE CÁMARA ---
+        // --- 6. INICIAR LIBRERÍA ---
         function iniciarScanner() {
-            // Usamos Html5QrcodeScanner que trae UI para elegir cámara
             html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader", 
-                { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 },
+                { 
+                    fps: 10, 
+                    qrbox: {width: 250, height: 250},
+                    aspectRatio: 1.0
+                },
                 /* verbose= */ false);
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         }
 
-        function reiniciarScanner() {
-           location.reload();
-        }
-
-        // Arrancar
-        window.onload = function() {
-            cargarBaseDatos();
-            iniciarScanner();
-        };
+        // Cargar al inicio
+        window.onload = cargarBaseDatos;
 
     </script>
 </body>
