@@ -20,8 +20,8 @@
     <div id="reader" class="flex-grow bg-black"></div>
 
     <div class="p-4 text-center bg-gray-900">
-        <p id="status-db" class="text-sm text-gray-400 animate-pulse">⏳ Conectando con base de datos...</p>
-        <p class="text-xs text-gray-600 mt-1">Modo: Solo con QR Válido</p>
+        <p id="status-db" class="text-sm text-gray-400 animate-pulse">⏳ Buscando lista...</p>
+        <p id="debug-msg" class="text-xs text-gray-600 mt-1">Versión V43: Detector Automático</p>
     </div>
 
     <div id="overlay" class="fixed inset-0 hidden flex flex-col items-center justify-center p-6 text-center z-50 text-white">
@@ -34,7 +34,7 @@
 
     <script>
         // ==========================================
-        // ⚠️ PEGA AQUÍ LA URL DE TU SCRIPT
+        // ⚠️ ASEGÚRATE DE QUE ESTA URL SEA LA CORRECTA
         // ==========================================
         const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec'; 
         // ==========================================
@@ -46,51 +46,67 @@
         async function iniciarSistema() {
             const status = document.getElementById('status-db');
             try {
-                // Pedimos los datos al script viejo
+                // Pedimos los datos
                 const resp = await fetch(`${URL_SCRIPT}?accion=listar_todo`);
                 const json = await resp.json();
                 
                 if (json.result === "success") {
                     const listaCruda = json.message;
                     
-                    // === AQUÍ ESTÁ EL FILTRO QUE PIDES ===
+                    // === FILTRO UNIVERSAL (BUSCA LINK O QRURL) ===
                     invitados = listaCruda.filter(item => {
-                        // CONDICIÓN 1: Que tenga un LINK (QR generado)
-                        // CONDICIÓN 2: Que el link no sea texto vacío
-                        // CONDICIÓN 3: Que tenga nombres
-                        return item.link && item.link.trim() !== "" && 
-                               ((item.esposo && item.esposo.length > 1) || (item.esposa && item.esposa.length > 1));
+                        // 1. Detectar cuál es el campo del link
+                        const elLink = item.link || item.qrUrl || item.url || ""; 
+                        
+                        // 2. Detectar nombres
+                        const elNombre = (item.esposo || "") + (item.esposa || "");
+
+                        // REGLA: Debe tener Link válido (más de 5 letras) Y algún nombre
+                        return elLink.length > 5 && elNombre.trim().length > 1;
+                    
                     }).map(p => ({
-                        busqueda: normalizar(p.esposo + " " + p.esposa),
-                        nombreMostar: `${p.esposo} & ${p.esposa}`,
+                        // Preparamos datos normalizados
+                        busqueda: normalizar((p.esposo||"") + " " + (p.esposa||"")),
+                        nombreMostar: `${p.esposo || ""} & ${p.esposa || ""}`,
                         fila: p.fila,
                         yaEntro: false 
                     }));
 
-                    status.innerHTML = `✅ <b>LISTO:</b> ${invitados.length} parejas con QR.`;
-                    status.className = "text-sm text-green-400 font-bold p-4 bg-gray-900";
-                    
-                    configurarCamara();
+                    if (invitados.length > 0) {
+                        status.innerHTML = `✅ <b>LISTO:</b> ${invitados.length} parejas cargadas.`;
+                        status.className = "text-sm text-green-400 font-bold p-4 bg-gray-900";
+                        configurarCamara();
+                    } else {
+                        // Si sigue saliendo 0, mostramos qué propiedades llegaron para debug
+                        console.log("Datos recibidos (Primer fila):", listaCruda[0]);
+                        status.innerHTML = "⚠️ 0 Parejas. Revisa la consola para ver qué llega.";
+                        status.className = "text-sm text-yellow-500 font-bold p-4";
+                    }
+
                 } else {
                     status.innerHTML = "❌ Error datos: " + json.message;
                     status.className = "text-sm text-red-500 font-bold p-4";
                 }
             } catch (e) {
-                // Reintento de seguridad
-                console.log("Reintentando con listar_envios...");
+                console.log(e);
+                // Intento de rescate por si la acción es diferente
                 fetch(`${URL_SCRIPT}?accion=listar_envios`)
                     .then(r => r.json())
                     .then(d => {
                         if(d.result === "success") {
-                            invitados = d.message.filter(item => item.link && item.link.trim() !== "" && ((item.esposo && item.esposo.length > 1) || (item.esposa && item.esposa.length > 1)))
-                                .map(p => ({ busqueda: normalizar(p.esposo + " " + p.esposa), nombreMostar: `${p.esposo} & ${p.esposa}`, fila: p.fila, yaEntro: false }));
-                            status.innerHTML = `✅ <b>LISTO:</b> ${invitados.length} parejas con QR.`;
+                            // Mismo filtro universal
+                            const listaSucia = d.message;
+                            invitados = listaSucia.filter(item => {
+                                const elLink = item.link || item.qrUrl || item.url || "";
+                                const elNombre = (item.esposo || "") + (item.esposa || "");
+                                return elLink.length > 5 && elNombre.trim().length > 1;
+                            }).map(p => ({ busqueda: normalizar((p.esposo||"") + " " + (p.esposa||"")), nombreMostar: `${p.esposo} & ${p.esposa}`, fila: p.fila, yaEntro: false }));
+                            
+                            status.innerHTML = `✅ <b>LISTO (Intento 2):</b> ${invitados.length} parejas.`;
                             status.className = "text-sm text-green-400 font-bold p-4 bg-gray-900";
                             configurarCamara();
                         }
-                    }).catch(err => {
-                        status.innerHTML = "❌ Error de conexión.";
-                    });
+                    }).catch(err => status.innerHTML = "❌ Error conexión.");
             }
         }
 
@@ -110,7 +126,7 @@
             if(scanner) scanner.pause();
 
             const qrLimpio = normalizar(textoQR);
-            console.log("QR:", qrLimpio);
+            console.log("Leído:", qrLimpio);
 
             const encontrado = invitados.find(p => {
                 if(!p.busqueda) return false;
@@ -119,11 +135,11 @@
 
             if (encontrado) {
                 if (encontrado.yaEntro) {
-                    mostrarResultado("warning", "⚠️ YA INGRESÓ", encontrado.nombreMostar, "Esta entrada ya fue utilizada (Localmente).");
+                    mostrarResultado("warning", "⚠️ YA INGRESÓ", encontrado.nombreMostar, "Esta entrada ya fue utilizada.");
                 } else {
                     mostrarResultado("success", "✅ BIENVENIDOS", encontrado.nombreMostar, "Pase autorizado.");
                     encontrado.yaEntro = true;
-                    // Intentamos marcar en servidor (si falla, no importa)
+                    // Intentamos marcar en servidor
                     fetch(`${URL_SCRIPT}?accion=marcar_asistencia&fila=${encontrado.fila}`, {method: 'POST'}).catch(e=>{});
                 }
             } else {
