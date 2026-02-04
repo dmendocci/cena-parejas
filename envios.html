@@ -11,29 +11,30 @@
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         button { transition: all 0.2s; }
         button:active { transform: scale(0.95); }
+        
+        /* ESTILO FORZADO PARA BOTONES DE RECORDATORIO */
+        .btn-recordatorio {
+            background-color: #dc2626 !important; /* Rojo fuerte */
+            color: white !important;
+            border: 1px solid #b91c1c !important;
+        }
+        .btn-recordatorio:hover {
+            background-color: #b91c1c !important; /* Más oscuro al pasar mouse */
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
-        // URL DEL SCRIPT
+        // URL DEL SCRIPT (TU VERSIÓN ESTABLE)
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec"; 
         
-        // --- BASE DE DATOS DE MENSAJES DE COBRO ---
+        // --- MENSAJES DE COBRO ---
         const MENSAJES_PAGO = [
-            // Opción 1: El Fraternal
             "¡Hola [NOMBRE]! Bendiciones. Les saludamos de la pastoral de matrimonios. Hoy queremos recordarles gentilmente que tenemos pendiente su paso final del pago de su inscripción para la Cena 'Amor que Permanece'. Estamos muy contentos de poder contar con ustedes. Agradeceríamos si pueden realizarlo el día de hoy. ¡Gracias!",
-            
-            // Opción 2: El Entusiasta
             "¡Bendiciones [NOMBRE]! Ya falta poco para nuestra noche especial. Queremos que todo esté perfecto para usted y su pareja. Le enviamos este recordatorio amistoso solicitando puedan realizar el pago; de ser posible hoy, por razones de logística. ¡Será un tiempo de mucha bendición para su matrimonio!",
-            
-            // Opción 3: El Logístico
             "¡Hola [NOMBRE]! Esperamos que estén muy bien. Por razones de logística; necesitamos realicen su pago cuanto antes. ¿Si han tenido algún inconveniente o necesitan ayuda con los datos de depósito? Estamos para servirles.",
-            
-            // Opción 4: El Breve y Cariñoso
             "¡Saludos hermanos! Un recordatorio cordial para solicitar nos apoyen con el envío de su aporte para nuestra cena romántica. Disfrutaremos de una noche grandiosa y su presencia es muy valiosa. ¡Bendiciones!",
-            
-            // Opción 5: Último llamado
             "¡Hola [NOMBRE]! Disculpen la insistencia, solo queremos asegurarnos de que no pierdan la oportunidad de estar presente en nuestra cena el 13 de febrero, por lo cual, solicitamos puedan realizar su pago pendiente. Anticiparemos verles allí para celebrar juntos."
         ];
     </script>
@@ -54,7 +55,6 @@
         </header>
 
         <div class="mb-6 flex flex-col md:flex-row gap-4">
-            
             <div class="relative flex-grow">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <i class="fas fa-search text-gray-400"></i>
@@ -62,7 +62,6 @@
                 <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar por nombre..." 
                        class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none transition">
             </div>
-
             <div class="w-full md:w-1/4">
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -79,7 +78,6 @@
                     </span>
                 </div>
             </div>
-
         </div>
 
         <div class="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -114,11 +112,8 @@
         function obtenerLinkWhatsApp(telefono, mensaje) {
             const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             let telLimpio = telefono.toString().replace(/\D/g, '');
-
-            if (telLimpio.length === 8) {
-                telLimpio = '504' + telLimpio;
-            }
-
+            if (telLimpio.length === 8) telLimpio = '504' + telLimpio;
+            
             if (esMovil) {
                 return `https://api.whatsapp.com/send?phone=${telLimpio}&text=${encodeURIComponent(mensaje)}`;
             } else {
@@ -129,7 +124,7 @@
         async function cargarDatos() {
             mostrarLoader(true);
             try {
-                // Intentamos cargar la lista completa
+                // PRIMER INTENTO
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_todo`);
                 const data = await response.json();
                 
@@ -137,14 +132,14 @@
                     datosGlobales = data.message;
                     filtrarTabla();
                 } else {
-                    // Fallback si la acción se llama distinto en el script viejo
+                    // INTENTO RESPALDO
                      const response2 = await fetch(`${SCRIPT_URL}?accion=listar_envios`);
                      const data2 = await response2.json();
                      if(data2.result === "success") {
                          datosGlobales = data2.message;
                          filtrarTabla();
                      } else {
-                        alert("⚠️ Error del servidor.");
+                        alert("⚠️ Error: " + data.message);
                      }
                 }
             } catch (e) {
@@ -199,7 +194,7 @@
                 let htmlAcciones = "";
                 
                 if (item.tienePago) {
-                    // --- CASO PAGADO (QR) ---
+                    // === PAGADO ===
                     htmlAcciones += `<div class="flex justify-center mb-3">
                         <a href="${item.qrUrl || item.link}" target="_blank" class="text-blue-600 hover:text-blue-800 text-xs font-bold underline decoration-dotted"><i class="fas fa-external-link-alt"></i> Ver QR</a>
                     </div>`;
@@ -221,35 +216,36 @@
                     htmlAcciones += `</div>`;
                     
                 } else {
-                    // --- CASO PENDIENTE (RECORDATORIOS) ---
+                    // === PENDIENTE (RECORDATORIOS) ===
                     let intentos = item.followUpCount || 0;
                     let indiceMensaje = intentos >= MENSAJES_PAGO.length ? MENSAJES_PAGO.length - 1 : intentos;
                     let tituloMensaje = ["Estándar", "Entusiasta", "Logístico", "Breve", "Último"][indiceMensaje];
 
+                    // Aquí aplicamos la clase 'btn-recordatorio' que forzamos en CSS
                     htmlAcciones += `
                     <div class="flex flex-col items-center bg-gray-50 p-2 rounded border border-gray-200">
-                        <span class="text-red-700 font-bold text-[9px] uppercase mb-2 tracking-wide">
-                            Recordar Pago
+                        <span class="text-red-800 font-bold text-[10px] uppercase mb-2 tracking-wide">
+                            <i class="fas fa-bell"></i> RECORDAR PAGO
                         </span>
                         
                         <div class="flex gap-2 mb-2">
                             <button onclick="enviarRecordatorio(${item.fila}, '${item.tel1}', '${item.esposo}', ${intentos}, 'esposo')" 
-                                    class="bg-red-600 text-white hover:bg-red-700 px-4 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1 transition">
+                                    class="btn-recordatorio px-4 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1 transition">
                                 <i class="fas fa-male"></i> Él
                             </button>
                             <button onclick="enviarRecordatorio(${item.fila}, '${item.tel2}', '${item.esposa}', ${intentos}, 'esposa')" 
-                                    class="bg-red-600 text-white hover:bg-red-700 px-4 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1 transition">
+                                    class="btn-recordatorio px-4 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1 transition">
                                 <i class="fas fa-female"></i> Ella
                             </button>
                         </div>
                         
-                        <span class="text-[9px] text-gray-400 italic">
+                        <span class="text-[9px] text-gray-500 italic">
                             Msj ${indiceMensaje + 1}/5: ${tituloMensaje}
                         </span>
                     </div>`;
                 }
 
-                // COLUMNA 4: STATUS / SEGUIMIENTO
+                // COLUMNA 4: STATUS
                 let htmlStatus = "";
                 if (item.tienePago) {
                     if (item.notifStatus === "oa") htmlStatus = '<span class="text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-100 text-xs"><i class="fas fa-check-double"></i> Ambos listos</span>';
@@ -275,19 +271,16 @@
             const filtrados = datosGlobales.filter(item => {
                 const coincideTexto = (item.esposo && item.esposo.toLowerCase().includes(texto)) || 
                                       (item.esposa && item.esposa.toLowerCase().includes(texto));
-                
                 let coincideEstado = true;
                 if (estado === "PAGADO") coincideEstado = item.tienePago === true;
                 if (estado === "PENDIENTE") coincideEstado = item.tienePago === false;
-
                 return coincideTexto && coincideEstado;
             });
-
             renderizarTabla(filtrados);
         }
 
         function enviarQR(fila, telefono, nombre, urlQR, destinatario) {
-            if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
+            if(!telefono || telefono.length < 5) { alert("⚠️ Teléfono inválido."); return; }
             let mensaje = `¡Hola ${nombre}! 👋\n\nNos alegra confirmar tu asistencia a la cena "Amor que Permanece". 🌹\n\nAquí tienes tu PASE DE ENTRADA PERSONAL:\n${urlQR}\n\nPor favor preséntalo en la entrada para tu ingreso. ¡Te esperamos! ✨`;
             let urlWA = obtenerLinkWhatsApp(telefono, mensaje);
             window.open(urlWA, '_blank');
@@ -297,8 +290,7 @@
         }
 
         function enviarRecordatorio(fila, telefono, nombre, intentosPrevios, rol) {
-            if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado para " + nombre); return; }
-            
+            if(!telefono || telefono.length < 5) { alert("⚠️ Teléfono inválido para " + nombre); return; }
             let indice = intentosPrevios >= MENSAJES_PAGO.length ? MENSAJES_PAGO.length - 1 : intentosPrevios;
             let plantilla = MENSAJES_PAGO[indice];
             let mensajeFinal = plantilla.replace("[Nombre de pareja]", nombre).replace("[NOMBRE]", nombre);
