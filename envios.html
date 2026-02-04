@@ -16,7 +16,26 @@
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
+        // URL DEL SCRIPT (VERSIÓN 2 FEB O ESTABLE)
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec"; 
+        
+        // --- BASE DE DATOS DE MENSAJES DE COBRO ---
+        const MENSAJES_PAGO = [
+            // Opción 1: El Fraternal
+            "¡Hola [NOMBRE]! Bendiciones. Les saludamos de la pastoral de matrimonios. Hoy queremos recordarles gentilmente que tenemos pendiente su paso final del pago de su inscripción para la Cena 'Amor que Permanece'. Estamos muy contentos de poder contar con ustedes. Agradeceríamos si pueden realizarlo el día de hoy. ¡Gracias!",
+            
+            // Opción 2: El Entusiasta
+            "¡Bendiciones [NOMBRE]! Ya falta poco para nuestra noche especial. Queremos que todo esté perfecto para usted y su pareja. Le enviamos este recordatorio amistoso solicitando puedan realizar el pago; de ser posible hoy, por razones de logística. ¡Será un tiempo de mucha bendición para su matrimonio!",
+            
+            // Opción 3: El Logístico
+            "¡Hola [NOMBRE]! Esperamos que estén muy bien. Por razones de logística; necesitamos realicen su pago cuanto antes. ¿Si han tenido algún inconveniente o necesitan ayuda con los datos de depósito? Estamos para servirles.",
+            
+            // Opción 4: El Breve y Cariñoso
+            "¡Saludos hermanos! Un recordatorio cordial para solicitar nos apoyen con el envío de su aporte para nuestra cena romántica. Disfrutaremos de una noche grandiosa y su presencia es muy valiosa. ¡Bendiciones!",
+            
+            // Opción 5: Último llamado
+            "¡Hola [NOMBRE]! Disculpen la insistencia, solo queremos asegurarnos de que no pierdan la oportunidad de estar presente en nuestra cena el 13 de febrero, por lo cual, solicitamos puedan realizar su pago pendiente. Anticiparemos verles allí para celebrar juntos."
+        ];
     </script>
 
     <div class="max-w-7xl mx-auto p-4">
@@ -110,15 +129,23 @@
         async function cargarDatos() {
             mostrarLoader(true);
             try {
+                // Usamos listar_todo o listar_envios según tu script
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_todo`);
                 const data = await response.json();
                 
                 if (data.result === "success") {
                     datosGlobales = data.message;
-                    // Al cargar, aplicamos el filtro por defecto (TODOS)
                     filtrarTabla();
                 } else {
-                    alert("⚠️ Error del servidor: " + data.message);
+                    // Intento de fallback
+                     const response2 = await fetch(`${SCRIPT_URL}?accion=listar_envios`);
+                     const data2 = await response2.json();
+                     if(data2.result === "success") {
+                         datosGlobales = data2.message;
+                         filtrarTabla();
+                     } else {
+                        alert("⚠️ Error del servidor.");
+                     }
                 }
             } catch (e) {
                 console.error(e);
@@ -168,35 +195,62 @@
                     ? `<div class="flex flex-col items-center"><span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200 shadow-sm"><i class="fas fa-check-circle"></i> PAGADO</span></div>`
                     : `<div class="flex flex-col items-center"><span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200 shadow-sm">PENDIENTE</span></div>`;
 
-                // COLUMNA 3: ACCIONES
+                // COLUMNA 3: ACCIONES (AQUÍ ESTÁ LA NUEVA LÓGICA)
                 let htmlAcciones = "";
+                
                 if (item.tienePago) {
+                    // --- CASO PAGADO (QR) ---
                     htmlAcciones += `<div class="flex justify-center mb-3">
-                        <a href="${item.qrUrl}" target="_blank" class="text-blue-600 hover:text-blue-800 text-xs font-bold underline decoration-dotted"><i class="fas fa-external-link-alt"></i> Probar Link QR</a>
+                        <a href="${item.qrUrl || item.link}" target="_blank" class="text-blue-600 hover:text-blue-800 text-xs font-bold underline decoration-dotted"><i class="fas fa-external-link-alt"></i> Ver QR</a>
                     </div>`;
                     
                     htmlAcciones += `<div class="flex justify-center gap-2">`;
                     
-                    let yaEnviadoO = item.notifStatus.includes("o");
+                    let yaEnviadoO = item.notifStatus && item.notifStatus.includes("o");
                     let btnClass1 = yaEnviadoO ? "bg-gray-200 text-gray-500 cursor-default border border-gray-300" : "bg-green-500 text-white hover:bg-green-600 shadow hover:shadow-md";
                     let icon1 = yaEnviadoO ? '<i class="fas fa-check-double"></i>' : '<i class="fab fa-whatsapp"></i>';
                     let label1 = yaEnviadoO ? "Enviado" : "Enviar a Él";
-                    htmlAcciones += `<button onclick="enviarQR(${item.fila}, '${item.tel1}', '${item.esposo}', '${item.qrUrl}', 'esposo')" class="${btnClass1} px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">${icon1} ${label1}</button>`;
+                    htmlAcciones += `<button onclick="enviarQR(${item.fila}, '${item.tel1}', '${item.esposo}', '${item.qrUrl || item.link}', 'esposo')" class="${btnClass1} px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">${icon1} ${label1}</button>`;
 
-                    let yaEnviadoA = item.notifStatus.includes("a");
+                    let yaEnviadoA = item.notifStatus && item.notifStatus.includes("a");
                     let btnClass2 = yaEnviadoA ? "bg-gray-200 text-gray-500 cursor-default border border-gray-300" : "bg-green-500 text-white hover:bg-green-600 shadow hover:shadow-md";
                     let icon2 = yaEnviadoA ? '<i class="fas fa-check-double"></i>' : '<i class="fab fa-whatsapp"></i>';
                     let label2 = yaEnviadoA ? "Enviado" : "Enviar a Ella";
-                    htmlAcciones += `<button onclick="enviarQR(${item.fila}, '${item.tel2}', '${item.esposa}', '${item.qrUrl}', 'esposa')" class="${btnClass2} px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">${icon2} ${label2}</button>`;
+                    htmlAcciones += `<button onclick="enviarQR(${item.fila}, '${item.tel2}', '${item.esposa}', '${item.qrUrl || item.link}', 'esposa')" class="${btnClass2} px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1">${icon2} ${label2}</button>`;
                     
                     htmlAcciones += `</div>`;
+                    
                 } else {
-                    htmlAcciones += `<div class="flex flex-col items-center">
-                        <button onclick="enviarRecordatorio(${item.fila}, '${item.tel1}', '${item.esposo}', ${item.followUpCount})" class="bg-yellow-500 text-white hover:bg-yellow-600 px-4 py-2 rounded-lg text-xs font-bold shadow-md hover:shadow-lg flex items-center gap-2 transition transform hover:-translate-y-0.5"><i class="fas fa-bell"></i> Recordar Pago</button>
+                    // --- CASO PENDIENTE (RECORDATORIOS) ---
+                    let intentos = item.followUpCount || 0;
+                    // Aseguramos que el índice no se pase del array
+                    let indiceMensaje = intentos >= MENSAJES_PAGO.length ? MENSAJES_PAGO.length - 1 : intentos;
+                    let tituloMensaje = ["Estándar", "Entusiasta", "Logístico", "Breve", "Último"][indiceMensaje];
+
+                    htmlAcciones += `
+                    <div class="flex flex-col items-center bg-orange-50 p-2 rounded border border-orange-100">
+                        <span class="text-red-900 font-bold text-[10px] uppercase mb-1 tracking-wide">
+                            <i class="fas fa-bell"></i> Recordar Pago
+                        </span>
+                        
+                        <div class="flex gap-2 mb-1">
+                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel1}', '${item.esposo}', ${intentos}, 'esposo')" 
+                                    class="bg-orange-500 text-white hover:bg-orange-600 px-3 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1">
+                                <i class="fas fa-male"></i> Enviar a Él
+                            </button>
+                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel2}', '${item.esposa}', ${intentos}, 'esposa')" 
+                                    class="bg-orange-500 text-white hover:bg-orange-600 px-3 py-1.5 rounded text-xs font-bold shadow hover:shadow-md flex items-center gap-1">
+                                <i class="fas fa-female"></i> Enviar a Ella
+                            </button>
+                        </div>
+                        
+                        <span class="text-[10px] text-gray-500">
+                            Mensaje ${indiceMensaje + 1}: <b>${tituloMensaje}</b>
+                        </span>
                     </div>`;
                 }
 
-                // COLUMNA 4: STATUS
+                // COLUMNA 4: STATUS / SEGUIMIENTO
                 let htmlStatus = "";
                 if (item.tienePago) {
                     if (item.notifStatus === "oa") htmlStatus = '<span class="text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-100 text-xs"><i class="fas fa-check-double"></i> Ambos listos</span>';
@@ -204,8 +258,8 @@
                     else if (item.notifStatus === "a") htmlStatus = '<span class="text-pink-600 bg-pink-50 px-2 py-1 rounded border border-pink-100 text-xs"><i class="fas fa-check"></i> Falta Él</span>';
                     else htmlStatus = '<span class="text-gray-400 text-xs italic">Pendiente de envío</span>';
                 } else {
-                    let intentos = item.followUpCount;
-                    let width = (intentos / 5) * 100;
+                    let intentos = item.followUpCount || 0;
+                    let width = Math.min((intentos / 5) * 100, 100);
                     let colorBarra = intentos >= 4 ? "bg-red-500" : "bg-yellow-500";
                     htmlStatus = `<div class="w-full max-w-[100px] mx-auto"><div class="flex justify-between text-[10px] text-gray-500 mb-1"><span>Intentos</span><span>${intentos}/5</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="${colorBarra} h-2 rounded-full" style="width: ${width}%"></div></div>${intentos >= 5 ? '<span class="text-[10px] text-red-600 font-bold block mt-1">¡Llamar!</span>' : ''}</div>`;
                 }
@@ -215,22 +269,18 @@
             });
         }
 
-        // --- NUEVA LÓGICA DE FILTRADO COMBINADO ---
         function filtrarTabla() {
             const texto = document.getElementById("searchInput").value.toLowerCase();
-            const estado = document.getElementById("filterStatus").value; // "TODOS", "PAGADO", "PENDIENTE"
+            const estado = document.getElementById("filterStatus").value;
 
             const filtrados = datosGlobales.filter(item => {
-                // 1. Filtro de Texto (Nombre)
                 const coincideTexto = (item.esposo && item.esposo.toLowerCase().includes(texto)) || 
                                       (item.esposa && item.esposa.toLowerCase().includes(texto));
                 
-                // 2. Filtro de Estado (Dropdown)
                 let coincideEstado = true;
                 if (estado === "PAGADO") coincideEstado = item.tienePago === true;
                 if (estado === "PENDIENTE") coincideEstado = item.tienePago === false;
 
-                // Ambos deben cumplirse
                 return coincideTexto && coincideEstado;
             });
 
@@ -242,25 +292,33 @@
             let mensaje = `¡Hola ${nombre}! 👋\n\nNos alegra confirmar tu asistencia a la cena "Amor que Permanece". 🌹\n\nAquí tienes tu PASE DE ENTRADA PERSONAL:\n${urlQR}\n\nPor favor preséntalo en la entrada para tu ingreso. ¡Te esperamos! ✨`;
             let urlWA = obtenerLinkWhatsApp(telefono, mensaje);
             window.open(urlWA, '_blank');
+            
+            // Registramos envío sin bloquear la pantalla
             fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=qr&fila=${fila}&destinatario=${destinatario}`, { method: 'POST' })
-                .then(() => { setTimeout(cargarDatos, 1500); });
+                .then(() => { setTimeout(cargarDatos, 2000); }); 
         }
 
-        function enviarRecordatorio(fila, telefono, nombre, intentosPrevios) {
-            if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado."); return; }
-            if(intentosPrevios >= 5) { alert("🛑 Límite alcanzado. Llamar personalmente."); return; }
-            const mensajes = [
-                `Hola ${nombre}, un gusto saludarte. 👋 Te recordamos completar tu inscripción para la cena enviando el comprobante. ¡Quedan pocos cupos!`, 
-                `Hola ${nombre}, solo pasaba a recordarte que esperamos tu comprobante para asegurar tu mesa en la cena "Amor que Permanece". 🍷 ¡No te quedes fuera!`,
-                `Hola ${nombre}, notamos que aún no tenemos tu comprobante. La fecha se acerca, ¿necesitas ayuda con el pago? Quedamos atentos.`,
-                `Estimado/a ${nombre}, por favor confirma tu asistencia enviando el comprobante hoy para no liberar tu reserva. 🙏`,
-                `⚠️ ÚLTIMO AVISO ${nombre}: Necesitamos tu confirmación urgente para la cena.`
-            ];
-            let texto = mensajes[intentosPrevios] || mensajes[4];
-            let urlWA = obtenerLinkWhatsApp(telefono, texto);
+        function enviarRecordatorio(fila, telefono, nombre, intentosPrevios, rol) {
+            if(!telefono || telefono.length < 5) { alert("⚠️ No hay un teléfono válido registrado para " + nombre); return; }
+            
+            // Selección inteligente del mensaje
+            let indice = intentosPrevios >= MENSAJES_PAGO.length ? MENSAJES_PAGO.length - 1 : intentosPrevios;
+            let plantilla = MENSAJES_PAGO[indice];
+            
+            // Personalización
+            let mensajeFinal = plantilla.replace("[Nombre de pareja]", nombre).replace("[NOMBRE]", nombre);
+            
+            let urlWA = obtenerLinkWhatsApp(telefono, mensajeFinal);
             window.open(urlWA, '_blank');
+            
+            // IMPORTANTE: Aquí llamamos al script para que sume 1 al contador
+            // Usamos 'registrar_recordatorio' o 'registrar_envio' según soporte tu script viejo
+            // Para no fallar, intentamos el genérico primero
             fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, { method: 'POST' })
-                .then(() => { setTimeout(cargarDatos, 1500); });
+                .then(() => { 
+                    // Recargamos para ver el cambio de contador en la barra
+                    setTimeout(cargarDatos, 2000); 
+                });
         }
 
         function mostrarLoader(show) { document.getElementById("loader").classList.toggle("hidden", !show); }
