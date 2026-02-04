@@ -3,124 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Entrada</title>
+    <title>Scanner Entrada - Cena Parejas</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #111; color: white; font-family: sans-serif; }
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 15px; border: 4px solid #333; }
+        body { background-color: #1a202c; color: white; }
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; background: #000; }
+        .success-screen { background-color: #22c55e; } /* Verde */
+        .error-screen { background-color: #ef4444; }   /* Rojo */
+        .warning-screen { background-color: #f59e0b; } /* Amarillo */
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-4">
+<body class="flex flex-col h-screen">
 
-    <script>
-        // URL DEL BACKEND V29
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec";
-    </script>
+    <div class="p-4 bg-gray-900 shadow-md z-10">
+        <h1 class="text-xl font-bold text-center text-red-500">Scanner Entrada ❤️</h1>
+        <p id="status-db" class="text-xs text-center text-gray-400 mt-1">Cargando base de datos...</p>
+    </div>
 
-    <div class="max-w-md w-full bg-gray-900 p-6 rounded-xl shadow-2xl text-center border border-gray-700">
-        <h1 class="text-2xl font-bold mb-6 text-gray-200 tracking-wider">
-            <i class="fas fa-qrcode text-red-500 mr-2"></i>VALIDACIÓN
-        </h1>
+    <div class="flex-grow flex flex-col items-center justify-start pt-4 px-4">
+        <div id="reader" class="shadow-2xl border-4 border-gray-700"></div>
         
-        <div id="reader"></div>
+        <button onclick="reiniciarScanner()" class="mt-4 text-xs text-gray-400 underline">
+            ¿Problemas con la cámara? Toca aquí
+        </button>
+    </div>
 
-        <div id="result" class="hidden p-6 rounded-lg mt-4 shadow-inner border-2">
-            <div id="icon" class="text-6xl mb-4 animate-bounce"></div>
-            <div id="msg" class="font-bold text-lg whitespace-pre-line leading-relaxed"></div>
-        </div>
-
-        <button onclick="reiniciarScanner()" id="btnReset" class="hidden mt-6 bg-gray-700 hover:bg-gray-600 text-white w-full py-4 rounded-lg font-bold text-lg transition border border-gray-500 shadow-lg">
-            <i class="fas fa-redo mr-2"></i> Escanear Siguiente
+    <div id="result-overlay" class="fixed inset-0 hidden flex flex-col items-center justify-center text-center p-6 z-50">
+        <div id="result-icon" class="text-8xl mb-4">✅</div>
+        <h2 id="result-title" class="text-4xl font-bold mb-2">BIENVENIDOS</h2>
+        <p id="result-name" class="text-2xl font-semibold">Carlos & María</p>
+        <p id="result-msg" class="mt-4 text-lg opacity-90">Registro Confirmado</p>
+        
+        <button onclick="cerrarOverlay()" class="mt-10 bg-white text-gray-800 font-bold py-3 px-10 rounded-full shadow-lg text-xl">
+            Siguiente Pareja
         </button>
     </div>
 
     <script>
-        let html5QrcodeScanner;
+        // --- CONFIGURACIÓN ---
+        const APPS_SCRIPT_URL = 'TU_URL_DEL_SCRIPT_AQUI'; // <--- ¡PEGA TU URL AQUÍ!
+
+        let listaInvitados = [];
+        let html5QrcodeScanner = null;
         let isScanning = true;
 
-        function onScanSuccess(decodedText, decodedResult) {
-            if (!isScanning) return; 
-
-            // Filtro de seguridad básico
-            if (!decodedText.includes("REGISTRO:")) {
-                mostrarResultado("error", "⛔ CÓDIGO INVÁLIDO\nEste QR no pertenece al sistema.");
-                return;
+        // --- 1. CARGA DE DATOS ---
+        async function cargarBaseDatos() {
+            const statusEl = document.getElementById('status-db');
+            try {
+                const response = await fetch(`${APPS_SCRIPT_URL}?accion=listar_asistencia`);
+                const data = await response.json();
+                
+                if (data.result === "success") {
+                    listaInvitados = data.message;
+                    statusEl.innerText = `Base de datos lista: ${listaInvitados.length} parejas.`;
+                    statusEl.classList.remove('text-red-400');
+                    statusEl.classList.add('text-green-400');
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (e) {
+                statusEl.innerText = "Error cargando lista. Revisa internet.";
+                statusEl.classList.add('text-red-400');
+                console.error(e);
             }
+        }
 
-            isScanning = false;
-            // Detenemos cámara visualmente
+        // --- 2. LÓGICA DE NORMALIZACIÓN (EL SECRETO) ---
+        // Esto quita acentos, "REGISTRO:", espacios extra y pasa a minúsculas
+        function normalizar(texto) {
+            if (!texto) return "";
+            return texto.toString()
+                .toLowerCase()
+                .replace("registro:", "") // Quitamos el prefijo del QR
+                .trim()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita tildes (á -> a)
+                .replace(/\s+/g, " "); // Convierte dobles espacios en uno
+        }
+
+        // --- 3. PROCESAR QR ESCANEADO ---
+        function onScanSuccess(decodedText, decodedResult) {
+            if (!isScanning) return; // Evitar lecturas dobles rápidas
+
+            // 1. Detener escaneo momentáneo
+            isScanning = false; 
             if(html5QrcodeScanner) html5QrcodeScanner.pause();
-            
-            mostrarResultado("loading", "🔍 Verificando bitácora...");
 
-            // LLAMADA AL SERVIDOR
-            fetch(`${SCRIPT_URL}?accion=check_in&qr_data=${encodeURIComponent(decodedText)}`)
-            .then(response => response.json())
-            .then(data => {
-                mostrarResultado(data.result, data.message);
-            })
-            .catch(err => {
-                mostrarResultado("error", "❌ ERROR DE RED\nRevisa tu conexión a internet.");
+            const qrLimpio = normalizar(decodedText);
+            console.log("Escaneado (Raw):", decodedText);
+            console.log("Escaneado (Limpio):", qrLimpio);
+
+            // 2. BUSCAR EN LA LISTA
+            // Buscamos si el string del QR está contenido en el nombre o viceversa
+            const encontrado = listaInvitados.find(invitado => {
+                const dbNombre = normalizar(invitado.nombres);
+                // Coincidencia flexible:
+                return dbNombre.includes(qrLimpio) || qrLimpio.includes(dbNombre);
             });
+
+            // 3. MOSTRAR RESULTADO
+            if (encontrado) {
+                if (encontrado.asistio) {
+                    mostrarPantalla("warning", "YA INGRESÓ", encontrado.nombres, "Esta pareja ya fue marcada antes.");
+                } else {
+                    mostrarPantalla("success", "BIENVENIDOS", encontrado.nombres, "Pase Válido");
+                    registrarEntradaBackend(encontrado.fila); // Guardar en Google Sheets
+                    encontrado.asistio = true; // Actualizar localmente para no dejar pasar doble
+                }
+            } else {
+                mostrarPantalla("error", "NO ENCONTRADO", "QR: " + decodedText, "Verifique que sea de este evento.");
+            }
         }
 
         function onScanFailure(error) {
-            // Ignorar errores de escaneo en progreso
+            // Ruido normal del escáner, no hacer nada
         }
 
-        function mostrarResultado(tipo, texto) {
-            const divRes = document.getElementById("result");
-            const icon = document.getElementById("icon");
-            const msg = document.getElementById("msg");
-            const btn = document.getElementById("btnReset");
-
-            // Reset clases
-            divRes.className = "p-6 rounded-lg mt-4 shadow-inner border-2"; // Base
-            divRes.classList.remove("hidden");
+        // --- UI DEL RESULTADO ---
+        function mostrarPantalla(tipo, titulo, nombre, mensaje) {
+            const overlay = document.getElementById('result-overlay');
+            const icon = document.getElementById('result-icon');
             
-            if (tipo === "success") {
-                // VERDE: ÉXITO
-                divRes.classList.add("bg-green-800", "border-green-500", "text-green-100");
-                icon.innerHTML = '<i class="fas fa-check-circle"></i>';
-                // Reproducir sonido "Beep" (Opcional, navegadores modernos bloquean a veces)
-            } else if (tipo === "warning") {
-                // AMARILLO/NARANJA: DUPLICADO (BITÁCORA MOSTRADA)
-                divRes.classList.add("bg-yellow-900", "border-yellow-500", "text-yellow-100");
-                icon.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500"></i>';
-                icon.classList.remove("animate-bounce"); // Fijo para leer mejor
-            } else if (tipo === "error") {
-                // ROJO: ERROR
-                divRes.classList.add("bg-red-900", "border-red-500", "text-red-100");
-                icon.innerHTML = '<i class="fas fa-ban"></i>';
-            } else if (tipo === "loading") {
-                // AZUL: CARGANDO
-                divRes.classList.add("bg-blue-900", "border-blue-500", "text-blue-100");
-                icon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            overlay.className = "fixed inset-0 flex flex-col items-center justify-center text-center p-6 z-50 text-white";
+            
+            if (tipo === 'success') {
+                overlay.classList.add('success-screen');
+                icon.innerText = "✅";
+                // Sonido de éxito (opcional)
+                new Audio('https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg').play().catch(e=>{});
+            } else if (tipo === 'error') {
+                overlay.classList.add('error-screen');
+                icon.innerText = "❌";
+                // Sonido de error
+                new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(e=>{});
+            } else { // Warning
+                overlay.classList.add('warning-screen');
+                icon.innerText = "⚠️";
             }
 
-            msg.innerText = texto;
+            document.getElementById('result-title').innerText = titulo;
+            document.getElementById('result-name').innerText = nombre;
+            document.getElementById('result-msg').innerText = mensaje;
             
-            if(tipo !== "loading") {
-                btn.classList.remove("hidden");
-            }
+            overlay.classList.remove('hidden');
         }
 
-        function reiniciarScanner() {
-            document.getElementById("result").classList.add("hidden");
-            document.getElementById("btnReset").classList.add("hidden");
+        function cerrarOverlay() {
+            document.getElementById('result-overlay').classList.add('hidden');
             isScanning = true;
             if(html5QrcodeScanner) html5QrcodeScanner.resume();
         }
 
-        // Configuración cámara
-        html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 },
-            false
-        );
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        async function registrarEntradaBackend(fila) {
+            try {
+                await fetch(`${APPS_SCRIPT_URL}?accion=marcar_asistencia&fila=${fila}`, {method: 'POST'});
+            } catch (e) {
+                console.error("No se pudo guardar online (pero ya entró localmente)", e);
+            }
+        }
+
+        // --- INICIALIZACIÓN DE CÁMARA ---
+        function iniciarScanner() {
+            // Usamos Html5QrcodeScanner que trae UI para elegir cámara
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", 
+                { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 },
+                /* verbose= */ false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function reiniciarScanner() {
+           location.reload();
+        }
+
+        // Arrancar
+        window.onload = function() {
+            cargarBaseDatos();
+            iniciarScanner();
+        };
 
     </script>
 </body>
