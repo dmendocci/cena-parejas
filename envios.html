@@ -103,24 +103,49 @@
         }
 
         async function cargarDatos() {
+            // Verificación rápida de seguridad
             if(SCRIPT_URL.includes("PEGAR_AQUI")) {
                 alert("⚠️ ERROR: No has pegado la nueva URL en el código.");
                 return;
             }
+
             mostrarLoader(true);
+            
             try {
+                // 1. Intentamos conectar
+                console.log("Intentando conectar a:", SCRIPT_URL);
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios`);
-                const data = await response.json();
+
+                // 2. Verificamos si Google respondió "OK" (Status 200)
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
+                }
+
+                // 3. Intentamos leer el texto de la respuesta
+                const textoRespuesta = await response.text();
+                console.log("Respuesta recibida:", textoRespuesta);
+
+                // 4. Intentamos convertir ese texto a JSON
+                let data;
+                try {
+                    data = JSON.parse(textoRespuesta);
+                } catch (jsonError) {
+                    // Si falla aquí, es que Google mandó HTML (error 404 o login) en vez de JSON
+                    throw new Error("No se recibió JSON válido. Es posible que la URL esté mal copiada o pida Login. Respuesta: " + textoRespuesta.substring(0, 50) + "...");
+                }
                 
+                // 5. Verificamos el resultado lógico
                 if (data.result === "success") {
                     datosGlobales = data.message;
                     filtrarTabla();
                 } else {
-                    alert("⚠️ Error del servidor: " + data.message);
+                    alert("⚠️ El servidor respondió con error: " + data.message);
                 }
+
             } catch (e) {
                 console.error(e);
-                alert("❌ Error de conexión. Verifique la URL del Script.");
+                // ESTA ALERTA NOS DIRÁ LA VERDAD
+                alert("❌ ERROR DETALLADO:\n\n" + e.name + ": " + e.message);
             } finally {
                 mostrarLoader(false);
             }
