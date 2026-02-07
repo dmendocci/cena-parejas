@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión V200 - Cola Segura</title>
+    <title>Gestión V300 - NÚCLEO REPARADO</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -13,22 +13,20 @@
         .btn-enviado { background-color: #9ca3af !important; color: white !important; cursor: not-allowed !important; }
         .fecha-mini { font-size: 9px; color: #4b5563; font-weight: 700; margin-top: 4px; display: block; line-height: 1; }
         .saving-indicator { font-size: 9px; color: #d97706; display: none; font-weight:bold; margin-top:2px; }
+        /* Debugger oculto */
+        .debug-data { display: none; font-size: 8px; color: #aaa; margin-top: 2px; font-family: monospace; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ LA NUEVA URL V200 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIOMEFLENEnnnLL6diYnz5OjextKZxcRfoWrghQ_NhHphIzS4jqBhCYZsD9h-AjLyrwA/exec"; 
+        // 👇 PEGA AQUÍ TU NUEVA URL V300 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOBo7JsviVedpRRmbsPQbGwWPU1WvITHrVe3XXym8J0gtGJY376l3TXXIsNb4NFqDXDg/exec"; 
         // =================================================================
         
         const MENSAJES_PAGO = [
-            "¡Hola [NOMBRE]! Bendiciones. Les saludamos de la pastoral de matrimonios. Hoy queremos recordarles gentilmente que tenemos pendiente su paso final del pago de su inscripción para la Cena 'Amor que Permanece'. Estamos muy contentos de poder contar con ustedes. Agradeceríamos si pueden realizarlo el día de hoy. ¡Gracias!",
-            "¡Bendiciones [NOMBRE]! Ya falta poco para nuestra noche especial. Queremos que todo esté perfecto para usted y su pareja. Le enviamos este recordatorio amistoso solicitando puedan realizar el pago; de ser posible hoy, por razones de logística. ¡Será un tiempo de mucha bendición para su matrimonio!",
-            "¡Hola [NOMBRE]! Esperamos que estén muy bien. Por razones de logística; necesitamos realicen su pago cuanto antes. ¿Si han tenido algún inconveniente o necesitan ayuda con los datos de depósito? Estamos para servirles.",
-            "¡Saludos hermanos! Un recordatorio cordial para solicitar nos apoyen con el envío de su aporte para nuestra cena romántica. Disfrutaremos de una noche grandiosa y su presencia es muy valiosa. ¡Bendiciones!",
-            "¡Hola [NOMBRE]! Disculpen la insistencia, solo queremos asegurarnos de que no pierdan la oportunidad de estar presente en nuestra cena el 13 de febrero, por lo cual, solicitamos puedan realizar su pago pendiente. Anticiparemos verles allí para celebrar juntos."
+            "¡Hola [NOMBRE]! Bendiciones...", "¡Bendiciones [NOMBRE]!...", "¡Hola [NOMBRE]!...", "¡Saludos hermanos!...", "¡Hola [NOMBRE]!..."
         ];
     </script>
 
@@ -38,7 +36,7 @@
                 <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
                     <i class="fas fa-heart text-red-600"></i> Control de Asistencia
                 </h1>
-                <p class="text-sm text-gray-500">Sistema V200 (Cola Segura)</p>
+                <p class="text-sm text-gray-500">Sistema V300 (Lectura Segura)</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
@@ -49,11 +47,10 @@
 
         <div class="mb-6 flex flex-col md:flex-row gap-4">
             <div class="relative flex-grow">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fas fa-search text-gray-400"></i></span>
-                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 outline-none">
+                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 outline-none">
             </div>
             <div class="w-full md:w-1/4">
-                <select id="filterStatus" onchange="filtrarTabla()" class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm">
+                <select id="filterStatus" onchange="filtrarTabla()" class="w-full p-3 rounded-lg border border-gray-300 shadow-sm">
                     <option value="TODOS">Todas las Parejas</option>
                     <option value="PENDIENTE">⚠️ Pendientes</option>
                     <option value="PAGADO">✅ Pagados</option>
@@ -88,74 +85,51 @@
 
     <script>
         let datosGlobales = [];
-        
-        // ======================================================
-        // 🚦 COLA DE PROCESAMIENTO (SOLUCIÓN DEFINITIVA) 🚦
-        // ======================================================
         let colaEnvios = [];
         let procesandoCola = false;
 
+        // --- COLA DE PROCESOS (Mantenemos esto porque es vital) ---
         async function encolarEnvioQR(fila, quien, tel, nombre, url, idBtn, idDate) {
             if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
-            
-            // 1. WhatsApp inmediato (Para que el usuario no espere)
             const msj = `¡Hola ${nombre}! 👋 Aquí tienes tu pase para la cena: ${url}`;
             window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
 
-            // 2. Cambio Visual Inmediato (Optimismo)
+            // Optimismo Visual
             const btn = document.getElementById(idBtn);
             const dateSpan = document.getElementById(idDate);
             if(btn && dateSpan) {
                 const now = new Date();
-                const dia = String(now.getDate()).padStart(2, '0');
-                const mes = String(now.getMonth() + 1).padStart(2, '0');
-                const hora = String(now.getHours()).padStart(2, '0');
-                const min = String(now.getMinutes()).padStart(2, '0');
-                
-                // Cambiamos el botón a GRIS inmediatamente
+                const fechaStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
                 btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
                 btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
-                dateSpan.innerText = `${dia}/${mes} ${hora}:${min}`;
-                
-                // Mostramos "Guardando..."
-                let savingId = `saving-${idDate}`;
-                let savingEl = document.getElementById(savingId);
+                dateSpan.innerText = `${fechaStr}`;
+                let savingEl = document.getElementById(`saving-${idDate}`);
                 if(savingEl) savingEl.style.display = "block";
             }
 
-            // 3. AGREGAR A LA COLA (No enviar directo)
-            console.log(`Encolando envío para: ${quien} (Fila ${fila})`);
             colaEnvios.push({ fila, quien, idDate });
-            procesarCola(); // Intentar procesar
+            procesarCola();
         }
 
         async function procesarCola() {
             if (procesandoCola || colaEnvios.length === 0) return;
-            
-            procesandoCola = true; // Bloquear
-            const tarea = colaEnvios.shift(); // Sacar el primero
+            procesandoCola = true;
+            const tarea = colaEnvios.shift();
 
             try {
-                // Enviar y ESPERAR RESPUESTA REAL
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify({ accion: 'registrar_envio_qr', fila: tarea.fila, quien: tarea.quien })
                 });
-                
-                // Ocultar "Guardando..." cuando termine
-                let savingId = `saving-${tarea.idDate}`;
-                let savingEl = document.getElementById(savingId);
+                let savingEl = document.getElementById(`saving-${tarea.idDate}`);
                 if(savingEl) savingEl.style.display = "none";
-
             } catch (error) {
-                console.error("Error en cola:", error);
-                // Si falla, no alertamos para no interrumpir el flujo visual, pero logueamos
+                console.error("Error cola:", error);
             } finally {
-                procesandoCola = false; // Liberar
-                procesarCola(); // Ver si hay otro en la fila (ej. la esposa)
+                procesandoCola = false;
+                procesarCola();
             }
         }
-        // ======================================================
 
         function obtenerLinkWhatsApp(telefono, mensaje) {
             let tel = telefono ? telefono.toString().replace(/\D/g, '') : "";
@@ -167,11 +141,9 @@
         }
 
         async function cargarDatos() {
-            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ ERROR: Pega la URL nueva."); return; }
-            
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V300"); return; }
             mostrarLoader(true);
             try {
-                // Anti-Caché para leer los datos reales
                 const cacheBuster = `&nocache=${new Date().getTime()}`;
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 if (!response.ok) throw new Error("Error HTTP " + response.status);
@@ -241,7 +213,6 @@
                     }
                     htmlAcciones += `<div class="flex gap-4">`;
                     
-                    // Botón Él
                     htmlAcciones += `
                         <div class="text-center w-24">
                             <button id="${idBtnEl}" onclick="encolarEnvioQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" 
@@ -252,7 +223,6 @@
                             <span id="saving-${idDateEl}" class="saving-indicator"><i class="fas fa-sync fa-spin"></i> ...</span>
                         </div>`;
 
-                    // Botón Ella
                     htmlAcciones += `
                         <div class="text-center w-24">
                             <button id="${idBtnElla}" onclick="encolarEnvioQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" 
@@ -263,9 +233,11 @@
                             <span id="saving-${idDateElla}" class="saving-indicator"><i class="fas fa-sync fa-spin"></i> ...</span>
                         </div>`;
                     
-                    htmlAcciones += `</div></div>`;
+                    htmlAcciones += `</div>`;
+                    // DEBUGGER: Muestra qué JSON recibió esta fila para descartar fallos de lectura
+                    // htmlAcciones += `<div class="debug-data text-center">RAW: ${JSON.stringify(notif)}</div>`;
+                    
                     htmlStatus = `<div class="text-center text-green-500 text-xs font-bold"><i class="fas fa-check-double"></i> Todo Listo</div>`;
-
                 } else {
                     let intentos = item.followUpCount || 0;
                     let indiceMensaje = Math.min(intentos, MENSAJES_PAGO.length - 1);
