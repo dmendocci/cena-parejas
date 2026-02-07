@@ -19,7 +19,7 @@
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ TU URL V600 👇
+        // 👇 PEGA AQUÍ TU URL ACTUALIZADA DEL BACKEND V600 👇
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGfLY0KVB6GNtBzCO093lrR2jm4B2ZpfemjgkDGz1EBJpEazAvsNvtqNgoLz4zo9xFrw/exec"; 
         // =================================================================
     </script>
@@ -58,7 +58,7 @@
         // 1. Cargar datos al abrir
         window.onload = async function() {
             try {
-                // CORRECCIÓN AQUÍ: Usamos 'listar_envios' que es la única acción válida ahora
+                // CORRECCIÓN AQUÍ: Usamos 'listar_envios' y el Anti-Caché
                 const cacheBuster = `&nocache=${new Date().getTime()}`;
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 const data = await response.json();
