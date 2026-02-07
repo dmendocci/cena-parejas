@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Envíos V95</title>
+    <title>Gestión de Envíos V100</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -18,8 +18,8 @@
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ LA NUEVA URL V95 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2wQAJK-bEan2mEB-b4b3ULijwCniBoDszjUMPeO8gwm1wNPjEHpU8_mf1aycdq6hNmw/exec"; 
+        // 👇 PEGA AQUÍ LA NUEVA URL V100 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHXdL0F_snEc9_uzNuxm0FDhtP6qY7ZMXxn3Y0jvj0CPpcm_74krh-IcnIHLg5iVAIdw/exec"; 
         // =================================================================
         
         const MENSAJES_PAGO = [
@@ -103,6 +103,7 @@
         async function cargarDatos() {
             mostrarLoader(true);
             try {
+                // TRUCO ANTI-CACHÉ (Para que siempre lea lo real)
                 const cacheBuster = `&nocache=${new Date().getTime()}`;
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 if (!response.ok) throw new Error("Error HTTP " + response.status);
@@ -248,18 +249,9 @@
                 dateSpan.innerText = `${fechaStr}`;
             }
 
-            // Aquí detectamos si falla
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ accion: 'registrar_envio_qr', fila: fila, quien: quien })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.result !== "success") alert("⚠️ ADVERTENCIA: No se guardó el envío en la base de datos.");
-            })
-            .catch(err => {
-                console.error(err);
-                alert("❌ ERROR DE RED: No se pudo conectar con el servidor.");
             });
         }
 
