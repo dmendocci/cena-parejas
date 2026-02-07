@@ -2,8 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión V600 - ESTABLE</title>
+    <title>Gestión V700 - NO CACHE</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -22,8 +25,8 @@
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ LA NUEVA URL V600 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJq_LFec4A8lRHSxXQtRlLi_5nIClhrkg_empKW_Lv_v3pOjJdNxvy8qg2L_CV_DVPzQ/exec"; 
+        // 👇 PEGA AQUÍ LA URL "VIRGEN" QUE ACABAS DE CREAR 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGfLY0KVB6GNtBzCO093lrR2jm4B2ZpfemjgkDGz1EBJpEazAvsNvtqNgoLz4zo9xFrw/exec"; 
         // =================================================================
         
         const MENSAJES_PAGO = [
@@ -37,9 +40,12 @@
                 <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
                     <i class="fas fa-heart text-red-600"></i> Control de Asistencia
                 </h1>
-                <p class="text-sm text-gray-500">Sistema V600 (Core Estable)</p>
+                <p class="text-sm text-gray-500">Sistema V700 (Cache Buster)</p>
             </div>
             <div class="flex gap-3">
+                <button onclick="forzarRecarga()" class="bg-red-600 text-white px-5 py-2 rounded-lg shadow hover:bg-red-700 flex items-center gap-2">
+                    <i class="fas fa-bomb"></i> Reset Total
+                </button>
                 <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
                     <i class="fas fa-sync-alt"></i> Actualizar
                 </button>
@@ -89,9 +95,13 @@
         let colaEnvios = [];
         let procesandoCola = false;
 
+        function forzarRecarga() {
+            // Esto borra la caché de la página actual y recarga forzosamente del servidor
+            window.location.reload(true);
+        }
+
         async function encolarEnvioQR(fila, quien, tel, nombre, url, idBtn, idDate) {
             if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
-            
             const msj = `¡Hola ${nombre}! 👋 Aquí tienes tu pase para la cena: ${url}`;
             window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
 
@@ -102,18 +112,15 @@
             if(btn && dateSpan) {
                 const now = new Date();
                 const fechaStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-                
                 btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
                 btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
                 dateSpan.innerText = `${fechaStr}`;
-                
                 if(statusSpan) {
                     statusSpan.style.display = "block";
                     statusSpan.className = "status-monitor status-wait";
                     statusSpan.innerText = "⏳ En cola...";
                 }
             }
-
             colaEnvios.push({ fila, quien, idDate });
             procesarCola();
         }
@@ -126,8 +133,11 @@
 
             try {
                 if(statusSpan) statusSpan.innerText = "🔄 Guardando...";
-
-                const response = await fetch(SCRIPT_URL, {
+                
+                // 🔥 CACHE BUSTER EN EL POST TAMBIÉN 🔥
+                const uniqueId = new Date().getTime() + Math.random();
+                
+                const response = await fetch(`${SCRIPT_URL}?uid=${uniqueId}`, {
                     method: 'POST',
                     body: JSON.stringify({ accion: 'registrar_envio_qr', fila: tarea.fila, quien: tarea.quien })
                 });
@@ -137,13 +147,12 @@
                 if (data.result === "success") {
                     if(statusSpan) {
                         statusSpan.className = "status-monitor status-ok";
-                        statusSpan.innerText = "✅ Guardado OK";
+                        statusSpan.innerText = "✅ OK";
                         setTimeout(() => { statusSpan.style.display = "none"; }, 3000);
                     }
                 } else {
                     throw new Error(data.message);
                 }
-
             } catch (error) {
                 if(statusSpan) {
                     statusSpan.className = "status-monitor status-err";
@@ -166,10 +175,14 @@
         }
 
         async function cargarDatos() {
-            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V600"); return; }
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V700"); return; }
             mostrarLoader(true);
             try {
-                const cacheBuster = `&nocache=${new Date().getTime()}`;
+                // 🔥 SÚPER CACHE BUSTER 🔥
+                // Agregamos un número aleatorio GIGANTE para que el navegador NO pueda usar memoria vieja
+                const cacheBuster = `&nocache=${new Date().getTime()}_${Math.random()}`;
+                console.log("Solicitando datos nuevos...", cacheBuster);
+                
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 const data = await response.json();
                 
