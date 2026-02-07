@@ -19,8 +19,8 @@
 
     <script>
         // =================================================================
-        // 👇 URL ACTUALIZADA 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpjWmqOGqN0g7FpLcokjemqf9tLOsgYjhEBFOK33I4fDjNBG3WpbKrUI6L4u89h0syHA/exec"; 
+        // 👇👇👇 ¡PEGA AQUÍ TU NUEVA URL GENERADA! 👇👇👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyOrV44jXatIGrkp8gL_n9qf08bzbxr5xiyUJ7RKioS7OZ_ieN1o5Q0UXCl31fFJM7JXQ/exec"; 
         // =================================================================
         
         const MENSAJES_PAGO = [
@@ -95,7 +95,7 @@
         function obtenerLinkWhatsApp(telefono, mensaje) {
             let tel = telefono ? telefono.toString().replace(/\D/g, '') : "";
             if (tel.length === 8) tel = '504' + tel;
-            if (tel.length < 5) return "#"; // Teléfono inválido
+            if (tel.length < 5) return "#"; 
             
             const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
             const urlBase = esMovil ? "https://api.whatsapp.com/send" : "https://web.whatsapp.com/send";
@@ -103,6 +103,10 @@
         }
 
         async function cargarDatos() {
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) {
+                alert("⚠️ ERROR: No has pegado la nueva URL en el código.");
+                return;
+            }
             mostrarLoader(true);
             try {
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios`);
@@ -134,7 +138,7 @@
                 const tr = document.createElement("tr");
                 tr.className = "hover:bg-red-50 transition duration-150";
 
-                // 1. NOMBRES
+                // NOMBRES
                 let htmlPareja = `
                     <div class="flex flex-col gap-1">
                         <div class="flex items-center gap-2"><span class="font-bold text-gray-900">${item.esposo}</span></div>
@@ -144,33 +148,62 @@
                         <div class="text-xs text-gray-500 ml-1"><i class="fab fa-whatsapp text-green-500"></i> ${item.tel2 || '---'}</div>
                     </div>`;
 
-                // 2. ESTADO PAGO
+                // ESTADO PAGO
                 let htmlPago = item.tienePago 
                     ? `<span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">PAGADO</span>`
                     : `<span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">PENDIENTE</span>`;
 
-                // 3. ACCIONES Y 4. SEGUIMIENTO (Lógica combinada)
+                // ACCIONES Y SEGUIMIENTO
                 let htmlAcciones = "";
-                let htmlStatus = ""; // Por defecto vacío
+                let htmlStatus = ""; 
 
                 if (item.tienePago) {
-                    // === SI YA PAGÓ ===
-                    // Acciones: Ver QR
+                    // === LÓGICA DE BOTONES QR CON CONTADOR ===
+                    // Datos de notificación (con fallback por si viene vacío)
+                    let notif = item.notificacion || { el: {c:0, t:''}, ella: {c:0, t:''} };
+                    
+                    // Configuración Botón EL
+                    let classEl = notif.el.c > 0 ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
+                    let textEl = notif.el.c > 0 ? `<i class="fas fa-redo"></i> Reenviar (${notif.el.c})` : `<i class="fas fa-paper-plane"></i> QR Él`;
+                    let dateEl = notif.el.c > 0 ? `<span class="block text-[9px] text-gray-500 mt-1">Último: ${notif.el.t}</span>` : "";
+
+                    // Configuración Botón ELLA
+                    let classElla = notif.ella.c > 0 ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
+                    let textElla = notif.ella.c > 0 ? `<i class="fas fa-redo"></i> Reenviar (${notif.ella.c})` : `<i class="fas fa-paper-plane"></i> QR Ella`;
+                    let dateElla = notif.ella.c > 0 ? `<span class="block text-[9px] text-gray-500 mt-1">Último: ${notif.ella.t}</span>` : "";
+
                     htmlAcciones += `<div class="flex flex-col items-center gap-2">`;
                     if(item.qrUrl) {
-                        htmlAcciones += `<a href="${item.qrUrl}" target="_blank" class="text-blue-600 text-xs font-bold underline">Ver QR</a>`;
+                        htmlAcciones += `<a href="${item.qrUrl}" target="_blank" class="text-blue-600 text-xs font-bold underline mb-1">Ver QR Generado</a>`;
                     }
-                    htmlAcciones += `<div class="flex gap-2">`;
-                    htmlAcciones += `<button onclick="enviarQR('${item.tel1}', '${item.esposo}', '${item.qrUrl}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs">QR Él</button>`;
-                    htmlAcciones += `<button onclick="enviarQR('${item.tel2}', '${item.esposa}', '${item.qrUrl}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs">QR Ella</button>`;
+                    htmlAcciones += `<div class="flex gap-4">`;
+                    
+                    // Botón Él
+                    htmlAcciones += `
+                        <div class="text-center">
+                            <button onclick="enviarQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.qrUrl}', this)" 
+                                    class="${classEl} text-white px-3 py-1 rounded text-xs transition shadow w-24">
+                                ${textEl}
+                            </button>
+                            ${dateEl}
+                        </div>`;
+
+                    // Botón Ella
+                    htmlAcciones += `
+                        <div class="text-center">
+                            <button onclick="enviarQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposa}', '${item.qrUrl}', this)" 
+                                    class="${classElla} text-white px-3 py-1 rounded text-xs transition shadow w-24">
+                                ${textElla}
+                            </button>
+                            ${dateElla}
+                        </div>`;
+                    
                     htmlAcciones += `</div></div>`;
                     
-                    // Seguimiento: VACÍO o mensaje de éxito
-                    htmlStatus = `<div class="text-center text-green-500 text-xs"><i class="fas fa-check"></i> Completado</div>`;
+                    htmlStatus = `<div class="text-center text-green-500 text-xs font-bold"><i class="fas fa-check-double"></i> Todo Listo</div>`;
 
                 } else {
                     // === SI NO HA PAGADO ===
-                    // Acciones: Botones de Cobro
                     let intentos = item.followUpCount || 0;
                     let indiceMensaje = Math.min(intentos, MENSAJES_PAGO.length - 1);
                     let tituloMensaje = ["Estándar", "Entusiasta", "Logístico", "Breve", "Último"][indiceMensaje];
@@ -185,7 +218,6 @@
                         <span class="text-[9px] text-gray-500 italic">Msj ${indiceMensaje + 1}: ${tituloMensaje}</span>
                     </div>`;
 
-                    // Seguimiento: BARRA DE PROGRESO (Solo visible si debe)
                     let width = Math.min((intentos / 5) * 100, 100);
                     let colorBarra = intentos >= 4 ? "bg-red-500" : "bg-yellow-500";
                     htmlStatus = `
@@ -221,27 +253,39 @@
             renderizarTabla(filtrados);
         }
 
-        function enviarQR(tel, nombre, url) {
+        // FUNCIÓN MEJORADA: Abre WhatsApp Y registra el envío
+        function enviarQR(fila, quien, tel, nombre, url, btn) {
             if(!url) { alert("⚠️ Aún no se ha generado el Link QR. Actualice la tabla."); return; }
+            
             const msj = `¡Hola ${nombre}! 👋 Aquí tienes tu pase para la cena: ${url}`;
+            
+            // 1. Abrir WhatsApp
             window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
+
+            // 2. Cambiar botón visualmente (Feedback inmediato)
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ...`;
+            
+            // 3. Avisar al servidor
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ accion: 'registrar_envio_qr', fila: fila, quien: quien })
+            }).then(() => {
+                // Pequeño delay para que dé tiempo de ver el cambio si recargas
+                setTimeout(() => cargarDatos(), 1000); 
+            });
         }
 
         function enviarRecordatorio(fila, tel, nombre, intentos, btn) {
             const msj = MENSAJES_PAGO[Math.min(intentos, MENSAJES_PAGO.length-1)].replace("[NOMBRE]", nombre);
             const link = obtenerLinkWhatsApp(tel, msj);
-            
             if(link === "#") { alert("⚠️ Teléfono no válido."); return; }
-            
             window.open(link, '_blank');
             
-            // Visual
             btn.classList.remove("btn-recordatorio");
             btn.classList.add("btn-enviado");
             btn.innerText = "Enviado";
             btn.disabled = true;
 
-            // Servidor (sin esperar respuesta para no bloquear)
             fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, {method: 'POST'});
         }
 
