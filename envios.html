@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Cena Parejas - DIAGNÓSTICO</title>
+    <title>Gestión Cena Parejas - CONTROL FINAL</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -13,13 +13,16 @@
         .btn-recordatorio { background-color: #dc2626 !important; color: white !important; border: 1px solid #b91c1c !important; }
         .btn-recordatorio:hover { background-color: #b91c1c !important; }
         .btn-enviado { background-color: #9ca3af !important; color: white !important; cursor: not-allowed !important; }
+        
+        /* Estilo para la fecha diminuta */
+        .fecha-mini { font-size: 10px; color: #666; font-weight: bold; margin-top: 2px; display: block; height: 12px; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
         // =================================================================
-        // 👇 URL VERIFICADA (V71 - ACCESO PÚBLICO) 👇
+        // 👇 TU URL V71 (ACCESO PÚBLICO) 👇
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyOrV44jXatIGrkp8gL_n9qf08bzbxr5xiyUJ7RKioS7OZ_ieN1o5Q0UXCl31fFJM7JXQ/exec";
         // =================================================================
         
@@ -38,7 +41,7 @@
                 <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
                     <i class="fas fa-heart text-red-600"></i> Control de Asistencia
                 </h1>
-                <p class="text-sm text-gray-500">Cena "Amor que Permanece" (Tabla Directa)</p>
+                <p class="text-sm text-gray-500">Cena "Amor que Permanece"</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
@@ -102,32 +105,19 @@
             return `${urlBase}?phone=${tel}&text=${encodeURIComponent(mensaje)}`;
         }
 
-        // =========================================================
-        // 🛠️ FUNCIÓN DE CARGA CON DIAGNÓSTICO DE ERRORES 🛠️
-        // =========================================================
         async function cargarDatos() {
             mostrarLoader(true);
             try {
-                // 1. Intentar conectar
-                console.log("Conectando a:", SCRIPT_URL);
-                const response = await fetch(`${SCRIPT_URL}?accion=listar_envios`);
-
-                // 2. Verificar estado HTTP
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
-                }
-
-                // 3. Obtener texto y verificar si es JSON
-                const textoRespuesta = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(textoRespuesta);
-                } catch (jsonError) {
-                    // Si falla aquí, Google devolvió HTML (error de login o 404)
-                    throw new Error("La URL devolvió HTML en lugar de JSON. ¿Requiere inicio de sesión?");
-                }
-
-                // 4. Procesar datos
+                // AGREGAMOS "&t=" + Date.now() PARA EVITAR QUE EL NAVEGADOR USE LA MEMORIA VIEJA
+                const urlFresca = `${SCRIPT_URL}?accion=listar_envios&t=${Date.now()}`;
+                console.log("Cargando:", urlFresca);
+                
+                const response = await fetch(urlFresca);
+                
+                if (!response.ok) throw new Error("Error HTTP " + response.status);
+                
+                const data = await response.json();
+                
                 if (data.result === "success") {
                     datosGlobales = data.message;
                     filtrarTabla();
@@ -137,8 +127,7 @@
 
             } catch (e) {
                 console.error(e);
-                // ESTA ALERTA ES LA QUE NOS DIRÁ QUÉ PASA
-                alert("❌ ERROR DETALLADO:\n" + e.name + ": " + e.message + "\n\n(Envía una foto de este mensaje)");
+                alert("❌ Error: " + e.message);
             } finally {
                 mostrarLoader(false);
             }
@@ -173,20 +162,28 @@
                 let htmlStatus = ""; 
 
                 if (item.tienePago) {
-                    let notif = item.notificacion || { el: {c:0, t:''}, ella: {c:0, t:''} };
+                    // === LÓGICA DE PERSISTENCIA DE BOTONES ===
+                    // Aseguramos que 'notificacion' sea un objeto válido
+                    let notif = item.notificacion;
+                    if (!notif || typeof notif !== 'object') {
+                        notif = { el: {c:0, t:''}, ella: {c:0, t:''} };
+                    }
                     
                     const idBtnEl = `btn-el-${item.fila}`;
                     const idDateEl = `date-el-${item.fila}`;
                     const idBtnElla = `btn-ella-${item.fila}`;
                     const idDateElla = `date-ella-${item.fila}`;
 
-                    let classEl = notif.el.c > 0 ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
-                    let textEl = notif.el.c > 0 ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Él`;
-                    let dateEl = notif.el.c > 0 ? `Último: ${notif.el.t}` : "";
+                    // --- BOTÓN ÉL ---
+                    // Si el contador es mayor a 0, ponemos GRIS y REENVIAR. Si no, VERDE.
+                    let classEl = (notif.el.c > 0) ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
+                    let textEl = (notif.el.c > 0) ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Él`;
+                    let dateEl = (notif.el.c > 0) ? `Enviado: ${notif.el.t}` : "";
 
-                    let classElla = notif.ella.c > 0 ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
-                    let textElla = notif.ella.c > 0 ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Ella`;
-                    let dateElla = notif.ella.c > 0 ? `Último: ${notif.ella.t}` : "";
+                    // --- BOTÓN ELLA ---
+                    let classElla = (notif.ella.c > 0) ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
+                    let textElla = (notif.ella.c > 0) ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Ella`;
+                    let dateElla = (notif.ella.c > 0) ? `Enviado: ${notif.ella.t}` : "";
 
                     htmlAcciones += `<div class="flex flex-col items-center gap-2">`;
                     if(item.qrUrl) {
@@ -194,28 +191,31 @@
                     }
                     htmlAcciones += `<div class="flex gap-4">`;
                     
+                    // Renderizamos Botón Él
                     htmlAcciones += `
                         <div class="text-center w-24">
                             <button id="${idBtnEl}" onclick="enviarQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" 
                                     class="${classEl} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textEl}
                             </button>
-                            <span id="${idDateEl}" class="block text-[9px] text-gray-500 mt-1 h-3">${dateEl}</span>
+                            <span id="${idDateEl}" class="fecha-mini">${dateEl}</span>
                         </div>`;
 
+                    // Renderizamos Botón Ella
                     htmlAcciones += `
                         <div class="text-center w-24">
                             <button id="${idBtnElla}" onclick="enviarQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" 
                                     class="${classElla} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textElla}
                             </button>
-                            <span id="${idDateElla}" class="block text-[9px] text-gray-500 mt-1 h-3">${dateElla}</span>
+                            <span id="${idDateElla}" class="fecha-mini">${dateElla}</span>
                         </div>`;
                     
                     htmlAcciones += `</div></div>`;
                     htmlStatus = `<div class="text-center text-green-500 text-xs font-bold"><i class="fas fa-check-double"></i> Todo Listo</div>`;
 
                 } else {
+                    // PENDIENTES DE PAGO
                     let intentos = item.followUpCount || 0;
                     let indiceMensaje = Math.min(intentos, MENSAJES_PAGO.length - 1);
                     let tituloMensaje = ["Estándar", "Entusiasta", "Logístico", "Breve", "Último"][indiceMensaje];
@@ -280,10 +280,12 @@
                 const mes = String(now.getMonth() + 1).padStart(2, '0');
                 const hora = String(now.getHours()).padStart(2, '0');
                 const min = String(now.getMinutes()).padStart(2, '0');
+                const fechaStr = `${dia}/${mes} ${hora}:${min}`;
                 
+                // Actualizar Visualmente
                 btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
                 btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
-                dateSpan.innerText = `Último: ${dia}/${mes} ${hora}:${min}`;
+                dateSpan.innerText = `Enviado: ${fechaStr}`;
             }
 
             fetch(SCRIPT_URL, {
