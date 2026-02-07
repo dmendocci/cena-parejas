@@ -17,8 +17,10 @@
 <body class="bg-gray-900 text-white min-h-screen">
 
     <script>
-        // ==== URL CONFIGURADA AUTOMÁTICAMENTE ===
+        // =================================================================
+        // 👇👇👇 ¡PEGA AQUÍ TU NUEVA URL DE APPS SCRIPT! 👇👇👇
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNCmdON32mHKNK6gui6u9j_CVXVN3_HbYVJoud_jw3nZaM6PAw2gAtkBJam0NuQldwIg/exec";
+        // =================================================================
     </script>
 
     <div class="max-w-md mx-auto p-4 flex flex-col h-screen">
@@ -138,6 +140,10 @@
         }
 
         async function cargarDatos() {
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) {
+                alert("⚠️ ERROR: No has pegado la nueva URL en el código.");
+                return;
+            }
             try {
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_asistencia`);
                 const data = await response.json();
@@ -166,7 +172,7 @@
                     btnHtml = `<span class="text-green-400 font-bold text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded"><i class="fas fa-check-circle"></i> Adentro</span>`;
                 } else {
                     btnHtml = `<button onclick="iniciarCamara(${item.fila})" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded text-xs font-bold shadow">
-                                <i class="fas fa-camera"></i> Foto
+                                    <i class="fas fa-camera"></i> Foto
                                </button>`;
                 }
 
@@ -225,7 +231,7 @@
                 } else {
                     alert("❌ Error: " + data.message);
                 }
-            } catch(e) { alert("❌ Error de subida."); } 
+            } catch(e) { alert("❌ Error de subida: " + e.toString()); } 
             finally { 
                 mostrarLoader(false); 
                 document.getElementById("cameraInput").value = "";
