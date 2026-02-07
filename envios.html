@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión V500 - FINAL</title>
+    <title>Gestión V600 - ESTABLE</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -22,8 +22,8 @@
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ LA NUEVA URL V500 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvQetXwa3gDSQWBi3hIn597pYDJeiYkxlZPikw_D3G-Mxr18AW28i2xT8zFvaJft1MgA/exec"; 
+        // 👇 PEGA AQUÍ LA NUEVA URL V600 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJq_LFec4A8lRHSxXQtRlLi_5nIClhrkg_empKW_Lv_v3pOjJdNxvy8qg2L_CV_DVPzQ/exec"; 
         // =================================================================
         
         const MENSAJES_PAGO = [
@@ -37,7 +37,7 @@
                 <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
                     <i class="fas fa-heart text-red-600"></i> Control de Asistencia
                 </h1>
-                <p class="text-sm text-gray-500">Sistema V500 (Núcleo Híbrido)</p>
+                <p class="text-sm text-gray-500">Sistema V600 (Core Estable)</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
@@ -145,7 +145,6 @@
                 }
 
             } catch (error) {
-                console.error("Error cola:", error);
                 if(statusSpan) {
                     statusSpan.className = "status-monitor status-err";
                     statusSpan.innerText = "❌ ERROR: " + error.message;
@@ -167,7 +166,7 @@
         }
 
         async function cargarDatos() {
-            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V500"); return; }
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V600"); return; }
             mostrarLoader(true);
             try {
                 const cacheBuster = `&nocache=${new Date().getTime()}`;
