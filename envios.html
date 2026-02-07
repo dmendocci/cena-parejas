@@ -19,7 +19,7 @@
 
     <script>
         // =================================================================
-        // 👇👇👇 ¡PEGA AQUÍ TU NUEVA URL GENERADA! 👇👇👇
+        // 👇 ASEGÚRATE DE QUE ESTA SEA LA URL DE LA VERSIÓN V70 👇
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyOrV44jXatIGrkp8gL_n9qf08bzbxr5xiyUJ7RKioS7OZ_ieN1o5Q0UXCl31fFJM7JXQ/exec"; 
         // =================================================================
         
@@ -158,19 +158,18 @@
                 let htmlStatus = ""; 
 
                 if (item.tienePago) {
-                    // === LÓGICA DE BOTONES QR CON CONTADOR ===
-                    // Datos de notificación (con fallback por si viene vacío)
+                    // === LÓGICA DE BOTONES QR CON FECHA ===
                     let notif = item.notificacion || { el: {c:0, t:''}, ella: {c:0, t:''} };
                     
-                    // Configuración Botón EL
+                    // Botón EL
                     let classEl = notif.el.c > 0 ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
-                    let textEl = notif.el.c > 0 ? `<i class="fas fa-redo"></i> Reenviar (${notif.el.c})` : `<i class="fas fa-paper-plane"></i> QR Él`;
-                    let dateEl = notif.el.c > 0 ? `<span class="block text-[9px] text-gray-500 mt-1">Último: ${notif.el.t}</span>` : "";
+                    let textEl = notif.el.c > 0 ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Él`;
+                    let dateEl = notif.el.c > 0 ? `<span class="fecha-envio block text-[9px] text-gray-500 mt-1">Último: ${notif.el.t}</span>` : `<span class="fecha-envio block text-[9px] text-gray-500 mt-1"></span>`;
 
-                    // Configuración Botón ELLA
+                    // Botón ELLA
                     let classElla = notif.ella.c > 0 ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
-                    let textElla = notif.ella.c > 0 ? `<i class="fas fa-redo"></i> Reenviar (${notif.ella.c})` : `<i class="fas fa-paper-plane"></i> QR Ella`;
-                    let dateElla = notif.ella.c > 0 ? `<span class="block text-[9px] text-gray-500 mt-1">Último: ${notif.ella.t}</span>` : "";
+                    let textElla = notif.ella.c > 0 ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Ella`;
+                    let dateElla = notif.ella.c > 0 ? `<span class="fecha-envio block text-[9px] text-gray-500 mt-1">Último: ${notif.ella.t}</span>` : `<span class="fecha-envio block text-[9px] text-gray-500 mt-1"></span>`;
 
                     htmlAcciones += `<div class="flex flex-col items-center gap-2">`;
                     if(item.qrUrl) {
@@ -178,21 +177,20 @@
                     }
                     htmlAcciones += `<div class="flex gap-4">`;
                     
-                    // Botón Él
+                    // Renderizamos los botones
                     htmlAcciones += `
-                        <div class="text-center">
+                        <div class="text-center w-24">
                             <button onclick="enviarQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.qrUrl}', this)" 
-                                    class="${classEl} text-white px-3 py-1 rounded text-xs transition shadow w-24">
+                                    class="${classEl} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textEl}
                             </button>
                             ${dateEl}
                         </div>`;
 
-                    // Botón Ella
                     htmlAcciones += `
-                        <div class="text-center">
+                        <div class="text-center w-24">
                             <button onclick="enviarQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposa}', '${item.qrUrl}', this)" 
-                                    class="${classElla} text-white px-3 py-1 rounded text-xs transition shadow w-24">
+                                    class="${classElla} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textElla}
                             </button>
                             ${dateElla}
@@ -239,21 +237,9 @@
             });
         }
 
-        function filtrarTabla() {
-            const texto = document.getElementById("searchInput").value.toLowerCase();
-            const estado = document.getElementById("filterStatus").value;
-            const filtrados = datosGlobales.filter(item => {
-                const matchTexto = (item.esposo && item.esposo.toLowerCase().includes(texto)) || 
-                                   (item.esposa && item.esposa.toLowerCase().includes(texto));
-                let matchEstado = true;
-                if (estado === "PAGADO") matchEstado = item.tienePago === true;
-                if (estado === "PENDIENTE") matchEstado = item.tienePago === false;
-                return matchTexto && matchEstado;
-            });
-            renderizarTabla(filtrados);
-        }
-
-        // FUNCIÓN MEJORADA: Abre WhatsApp Y registra el envío
+        // ==========================================
+        // 🔥 LÓGICA DE ACTUALIZACIÓN INMEDIATA 🔥
+        // ==========================================
         function enviarQR(fila, quien, tel, nombre, url, btn) {
             if(!url) { alert("⚠️ Aún no se ha generado el Link QR. Actualice la tabla."); return; }
             
@@ -262,16 +248,30 @@
             // 1. Abrir WhatsApp
             window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
 
-            // 2. Cambiar botón visualmente (Feedback inmediato)
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ...`;
-            
-            // 3. Avisar al servidor
+            // 2. CALCULAR FECHA Y HORA ACTUAL (Para mostrar ya mismo)
+            const now = new Date();
+            const dia = String(now.getDate()).padStart(2, '0');
+            const mes = String(now.getMonth() + 1).padStart(2, '0');
+            const hora = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const fechaTexto = `Último: ${dia}/${mes} ${hora}:${min}`;
+
+            // 3. CAMBIAR EL BOTÓN A GRIS Y PONER "REENVIAR" (INMEDIATO)
+            btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
+            btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
+
+            // 4. INSERTAR LA FECHA ABAJO (MANIPULANDO EL DOM)
+            // Buscamos el span vacío que dejamos reservado abajo del botón
+            let contenedorPadre = btn.parentNode;
+            let spanFecha = contenedorPadre.querySelector(".fecha-envio");
+            if(spanFecha) {
+                spanFecha.innerText = fechaTexto;
+            }
+
+            // 5. GUARDAR EN SILENCIO (Sin recargar la tabla para no borrar el cambio visual)
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ accion: 'registrar_envio_qr', fila: fila, quien: quien })
-            }).then(() => {
-                // Pequeño delay para que dé tiempo de ver el cambio si recargas
-                setTimeout(() => cargarDatos(), 1000); 
             });
         }
 
