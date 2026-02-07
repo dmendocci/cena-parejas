@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMULADOR DE LECTURA</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Estilos visuales para diferenciarlo del scanner real */
+        body { background-color: #2e1065; color: white; } /* Fondo morado oscuro */
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; border: 4px solid #a855f7; }
+        .resultado-box { animation: popIn 0.3s ease-out; }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+
+    <script>
+        // =================================================================
+        // 👇 PEGA AQUÍ TU URL (La misma de siempre) 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpjWmqOGqN0g7FpLcokjemqf9tLOsgYjhEBFOK33I4fDjNBG3WpbKrUI6L4u89h0syHA/exec"; 
+        // =================================================================
+    </script>
+
+    <div class="w-full max-w-md mb-4 text-center">
+        <div class="bg-yellow-400 text-black font-bold px-4 py-2 rounded-full inline-block mb-2 shadow-lg text-xs uppercase tracking-widest">
+            <i class="fas fa-flask"></i> Modo Prueba / Simulador
+        </div>
+        <h1 class="text-2xl font-bold text-white">Verificador de QR</h1>
+        <p class="text-purple-300 text-sm">Este scanner NO marca asistencia</p>
+    </div>
+
+    <div class="w-full max-w-md relative mb-4">
+        <div id="reader"></div>
+        <div id="loadingOverlay" class="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-10">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-500 mb-2"></i>
+            <p class="text-sm">Descargando base de datos...</p>
+        </div>
+    </div>
+
+    <div id="resultArea" class="w-full max-w-md hidden">
+        </div>
+
+    <button onclick="reiniciarScanner()" id="btnReset" class="hidden mt-6 bg-white text-purple-900 px-6 py-3 rounded-full font-bold shadow-lg hover:bg-gray-200 transition">
+        <i class="fas fa-camera"></i> Escanear Otro
+    </button>
+
+    <audio id="audioOk" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+    <audio id="audioFail" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
+
+    <script>
+        let html5QrCode;
+        let listaGlobal = [];
+        let isScanning = true;
+
+        // 1. Cargar datos al abrir
+        window.onload = async function() {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?accion=listar_asistencia`);
+                const data = await response.json();
+                
+                if(data.result === "success") {
+                    listaGlobal = data.message;
+                    document.getElementById("loadingOverlay").classList.add("hidden");
+                    iniciarCamara();
+                } else {
+                    alert("Error cargando la lista. Recarga la página.");
+                }
+            } catch(e) {
+                alert("Error de conexión. Verifica internet.");
+            }
+        };
+
+        function iniciarCamara() {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                console.error(err);
+                alert("Error: No se pudo iniciar la cámara.");
+            });
+        }
+
+        function onScanSuccess(decodedText) {
+            if (!isScanning) return;
+            
+            // Pausar cámara para mostrar resultado
+            html5QrCode.pause();
+            isScanning = false;
+            
+            verificarQR(decodedText);
+        }
+
+        function verificarQR(textoQR) {
+            const area = document.getElementById("resultArea");
+            const btn = document.getElementById("btnReset");
+            area.classList.remove("hidden");
+            btn.classList.remove("hidden");
+
+            // Lógica de búsqueda (Idéntica a producción)
+            const normalizar = (t) => t ? t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
+            
+            // Limpiamos el texto del QR (quitamos la URL si viene completa)
+            let textoLimpio = decodeURIComponent(textoQR);
+            let textoNorm = normalizar(textoLimpio);
+
+            // Buscamos coincidencia
+            const encontrado = listaGlobal.find(item => {
+                const esposo = normalizar(item.esposo);
+                const esposa = normalizar(item.esposa);
+                // ¿El nombre de la DB está contenido en el QR?
+                return (esposo && textoNorm.includes(esposo)) || (esposa && textoNorm.includes(esposa));
+            });
+
+            if (encontrado) {
+                // ✅ ÉXITO
+                document.getElementById("audioOk").play();
+                area.innerHTML = `
+                    <div class="resultado-box bg-green-500 text-white p-6 rounded-xl shadow-xl text-center border-4 border-white">
+                        <div class="text-5xl mb-2"><i class="fas fa-check-circle"></i></div>
+                        <h2 class="text-2xl font-bold mb-2">QR CORRECTO</h2>
+                        <div class="bg-green-700 bg-opacity-50 p-3 rounded-lg">
+                            <p class="text-xs uppercase tracking-wider opacity-75">Pertenece a:</p>
+                            <p class="text-xl font-bold">${encontrado.esposo}</p>
+                            <p class="text-sm">& ${encontrado.esposa}</p>
+                        </div>
+                        <p class="mt-4 text-xs bg-black bg-opacity-20 inline-block px-2 py-1 rounded">
+                            Fila: ${encontrado.fila} | Estado: ${encontrado.asistio ? "Ya ingresó" : "Pendiente"}
+                        </p>
+                    </div>
+                `;
+            } else {
+                // ❌ ERROR
+                document.getElementById("audioFail").play();
+                area.innerHTML = `
+                    <div class="resultado-box bg-red-600 text-white p-6 rounded-xl shadow-xl text-center border-4 border-white">
+                        <div class="text-5xl mb-2"><i class="fas fa-times-circle"></i></div>
+                        <h2 class="text-2xl font-bold mb-2">NO ENCONTRADO</h2>
+                        <p class="mb-4">Este código QR no coincide con ninguna pareja de la lista.</p>
+                        <div class="bg-black bg-opacity-20 p-2 rounded text-xs font-mono break-all">
+                            Lectura: ${textoQR}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function reiniciarScanner() {
+            document.getElementById("resultArea").classList.add("hidden");
+            document.getElementById("btnReset").classList.add("hidden");
+            isScanning = true;
+            html5QrCode.resume();
+        }
+
+    </script>
+</body>
+</html>
