@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Envíos V100</title>
+    <title>Gestión V200 - Cola Segura</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -12,14 +12,15 @@
         .btn-recordatorio { background-color: #dc2626 !important; color: white !important; }
         .btn-enviado { background-color: #9ca3af !important; color: white !important; cursor: not-allowed !important; }
         .fecha-mini { font-size: 9px; color: #4b5563; font-weight: 700; margin-top: 4px; display: block; line-height: 1; }
+        .saving-indicator { font-size: 9px; color: #d97706; display: none; font-weight:bold; margin-top:2px; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ LA NUEVA URL V100 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHXdL0F_snEc9_uzNuxm0FDhtP6qY7ZMXxn3Y0jvj0CPpcm_74krh-IcnIHLg5iVAIdw/exec"; 
+        // 👇 PEGA AQUÍ LA NUEVA URL V200 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIOMEFLENEnnnLL6diYnz5OjextKZxcRfoWrghQ_NhHphIzS4jqBhCYZsD9h-AjLyrwA/exec"; 
         // =================================================================
         
         const MENSAJES_PAGO = [
@@ -37,7 +38,7 @@
                 <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
                     <i class="fas fa-heart text-red-600"></i> Control de Asistencia
                 </h1>
-                <p class="text-sm text-gray-500">Cena "Amor que Permanece"</p>
+                <p class="text-sm text-gray-500">Sistema V200 (Cola Segura)</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
@@ -49,17 +50,14 @@
         <div class="mb-6 flex flex-col md:flex-row gap-4">
             <div class="relative flex-grow">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fas fa-search text-gray-400"></i></span>
-                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none transition">
+                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 outline-none">
             </div>
             <div class="w-full md:w-1/4">
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fas fa-filter text-gray-500"></i></span>
-                    <select id="filterStatus" onchange="filtrarTabla()" class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none appearance-none bg-white cursor-pointer">
-                        <option value="TODOS">Todas las Parejas</option>
-                        <option value="PENDIENTE">⚠️ Pendientes</option>
-                        <option value="PAGADO">✅ Pagados</option>
-                    </select>
-                </div>
+                <select id="filterStatus" onchange="filtrarTabla()" class="w-full pl-10 p-3 rounded-lg border border-gray-300 shadow-sm">
+                    <option value="TODOS">Todas las Parejas</option>
+                    <option value="PENDIENTE">⚠️ Pendientes</option>
+                    <option value="PAGADO">✅ Pagados</option>
+                </select>
             </div>
         </div>
 
@@ -90,6 +88,74 @@
 
     <script>
         let datosGlobales = [];
+        
+        // ======================================================
+        // 🚦 COLA DE PROCESAMIENTO (SOLUCIÓN DEFINITIVA) 🚦
+        // ======================================================
+        let colaEnvios = [];
+        let procesandoCola = false;
+
+        async function encolarEnvioQR(fila, quien, tel, nombre, url, idBtn, idDate) {
+            if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
+            
+            // 1. WhatsApp inmediato (Para que el usuario no espere)
+            const msj = `¡Hola ${nombre}! 👋 Aquí tienes tu pase para la cena: ${url}`;
+            window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
+
+            // 2. Cambio Visual Inmediato (Optimismo)
+            const btn = document.getElementById(idBtn);
+            const dateSpan = document.getElementById(idDate);
+            if(btn && dateSpan) {
+                const now = new Date();
+                const dia = String(now.getDate()).padStart(2, '0');
+                const mes = String(now.getMonth() + 1).padStart(2, '0');
+                const hora = String(now.getHours()).padStart(2, '0');
+                const min = String(now.getMinutes()).padStart(2, '0');
+                
+                // Cambiamos el botón a GRIS inmediatamente
+                btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
+                btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
+                dateSpan.innerText = `${dia}/${mes} ${hora}:${min}`;
+                
+                // Mostramos "Guardando..."
+                let savingId = `saving-${idDate}`;
+                let savingEl = document.getElementById(savingId);
+                if(savingEl) savingEl.style.display = "block";
+            }
+
+            // 3. AGREGAR A LA COLA (No enviar directo)
+            console.log(`Encolando envío para: ${quien} (Fila ${fila})`);
+            colaEnvios.push({ fila, quien, idDate });
+            procesarCola(); // Intentar procesar
+        }
+
+        async function procesarCola() {
+            if (procesandoCola || colaEnvios.length === 0) return;
+            
+            procesandoCola = true; // Bloquear
+            const tarea = colaEnvios.shift(); // Sacar el primero
+
+            try {
+                // Enviar y ESPERAR RESPUESTA REAL
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ accion: 'registrar_envio_qr', fila: tarea.fila, quien: tarea.quien })
+                });
+                
+                // Ocultar "Guardando..." cuando termine
+                let savingId = `saving-${tarea.idDate}`;
+                let savingEl = document.getElementById(savingId);
+                if(savingEl) savingEl.style.display = "none";
+
+            } catch (error) {
+                console.error("Error en cola:", error);
+                // Si falla, no alertamos para no interrumpir el flujo visual, pero logueamos
+            } finally {
+                procesandoCola = false; // Liberar
+                procesarCola(); // Ver si hay otro en la fila (ej. la esposa)
+            }
+        }
+        // ======================================================
 
         function obtenerLinkWhatsApp(telefono, mensaje) {
             let tel = telefono ? telefono.toString().replace(/\D/g, '') : "";
@@ -101,9 +167,11 @@
         }
 
         async function cargarDatos() {
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ ERROR: Pega la URL nueva."); return; }
+            
             mostrarLoader(true);
             try {
-                // TRUCO ANTI-CACHÉ (Para que siempre lea lo real)
+                // Anti-Caché para leer los datos reales
                 const cacheBuster = `&nocache=${new Date().getTime()}`;
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 if (!response.ok) throw new Error("Error HTTP " + response.status);
@@ -173,26 +241,31 @@
                     }
                     htmlAcciones += `<div class="flex gap-4">`;
                     
+                    // Botón Él
                     htmlAcciones += `
                         <div class="text-center w-24">
-                            <button id="${idBtnEl}" onclick="enviarQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" 
+                            <button id="${idBtnEl}" onclick="encolarEnvioQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" 
                                     class="${classEl} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textEl}
                             </button>
                             <span id="${idDateEl}" class="fecha-mini">${dateEl}</span>
+                            <span id="saving-${idDateEl}" class="saving-indicator"><i class="fas fa-sync fa-spin"></i> ...</span>
                         </div>`;
 
+                    // Botón Ella
                     htmlAcciones += `
                         <div class="text-center w-24">
-                            <button id="${idBtnElla}" onclick="enviarQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" 
+                            <button id="${idBtnElla}" onclick="encolarEnvioQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" 
                                     class="${classElla} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textElla}
                             </button>
                             <span id="${idDateElla}" class="fecha-mini">${dateElla}</span>
+                            <span id="saving-${idDateElla}" class="saving-indicator"><i class="fas fa-sync fa-spin"></i> ...</span>
                         </div>`;
                     
                     htmlAcciones += `</div></div>`;
                     htmlStatus = `<div class="text-center text-green-500 text-xs font-bold"><i class="fas fa-check-double"></i> Todo Listo</div>`;
+
                 } else {
                     let intentos = item.followUpCount || 0;
                     let indiceMensaje = Math.min(intentos, MENSAJES_PAGO.length - 1);
@@ -224,34 +297,6 @@
                                 <td class="px-5 py-4 bg-white text-center border-r border-gray-100">${htmlAcciones}</td>
                                 <td class="px-5 py-4 bg-white text-center">${htmlStatus}</td>`;
                 tbody.appendChild(tr);
-            });
-        }
-
-        function enviarQR(fila, quien, tel, nombre, url, idBtn, idDate) {
-            if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
-            
-            const msj = `¡Hola ${nombre}! 👋 Aquí tienes tu pase para la cena: ${url}`;
-            window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
-
-            const btn = document.getElementById(idBtn);
-            const dateSpan = document.getElementById(idDate);
-
-            if(btn && dateSpan) {
-                const now = new Date();
-                const dia = String(now.getDate()).padStart(2, '0');
-                const mes = String(now.getMonth() + 1).padStart(2, '0');
-                const hora = String(now.getHours()).padStart(2, '0');
-                const min = String(now.getMinutes()).padStart(2, '0');
-                const fechaStr = `${dia}/${mes} ${hora}:${min}`;
-                
-                btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
-                btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
-                dateSpan.innerText = `${fechaStr}`;
-            }
-
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ accion: 'registrar_envio_qr', fila: fila, quien: quien })
             });
         }
 
