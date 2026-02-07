@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Pruebas QR</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .qr-cell img { display: block; margin: 0 auto; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <script>
+        // =================================================================
+        // 👇 PEGA AQUÍ LA MISMA URL QUE EN LOS OTROS ARCHIVOS 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpjWmqOGqN0g7FpLcokjemqf9tLOsgYjhEBFOK33I4fDjNBG3WpbKrUI6L4u89h0syHA/exec"; 
+        // =================================================================
+    </script>
+
+    <div class="max-w-6xl mx-auto p-6">
+        <header class="mb-6 flex justify-between items-center bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-600">
+            <div>
+                <h1 class="text-2xl font-bold text-purple-800">
+                    <i class="fas fa-microscope"></i> Laboratorio de Pruebas QR
+                </h1>
+                <p class="text-sm text-gray-500">Validador masivo de lectura</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded shadow hover:bg-blue-700">
+                    <i class="fas fa-sync"></i> 1. Cargar Datos
+                </button>
+                <button onclick="probarTodos()" class="bg-purple-600 text-white px-5 py-2 rounded shadow hover:bg-purple-700">
+                    <i class="fas fa-play"></i> 2. Ejecutar Prueba Masiva
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="bg-white p-4 rounded shadow text-center">
+                <span class="block text-gray-500 text-xs">Total Parejas</span>
+                <span id="statTotal" class="text-2xl font-bold">0</span>
+            </div>
+            <div class="bg-white p-4 rounded shadow text-center border-b-4 border-green-500">
+                <span class="block text-gray-500 text-xs">QR Legibles (Encontrados)</span>
+                <span id="statOk" class="text-2xl font-bold text-green-600">0</span>
+            </div>
+            <div class="bg-white p-4 rounded shadow text-center border-b-4 border-red-500">
+                <span class="block text-gray-500 text-xs">Errores de Lectura</span>
+                <span id="statError" class="text-2xl font-bold text-red-600">0</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full leading-normal">
+                <thead>
+                    <tr class="bg-gray-200 text-gray-600 uppercase text-xs leading-normal">
+                        <th class="py-3 px-6 text-left">Fila</th>
+                        <th class="py-3 px-6 text-left">Pareja (Base de Datos)</th>
+                        <th class="py-3 px-6 text-center">QR Generado</th>
+                        <th class="py-3 px-6 text-center">Simulación Escáner</th>
+                        <th class="py-3 px-6 text-center">Resultado</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaPruebas" class="text-sm font-light">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let listaGlobal = [];
+
+        async function cargarDatos() {
+            document.getElementById("tablaPruebas").innerHTML = '<tr><td colspan="5" class="text-center py-10">Cargando datos...</td></tr>';
+            try {
+                const response = await fetch(`${SCRIPT_URL}?accion=listar_asistencia`); // Usamos listar_asistencia para obtener todos
+                const data = await response.json();
+                
+                if (data.result === "success") {
+                    listaGlobal = data.message;
+                    document.getElementById("statTotal").innerText = listaGlobal.length;
+                    renderizarTabla();
+                } else {
+                    alert("Error cargando datos");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión");
+            }
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById("tablaPruebas");
+            tbody.innerHTML = "";
+            
+            listaGlobal.forEach((item, index) => {
+                // Generar el mismo string que genera el sistema real
+                // NOTA: Si usas una URL base diferente en pase.html, cámbiala aquí para la prueba
+                const urlBase = "https://dmendocci.github.io/cena-parejas/pase.html"; 
+                let qrData = item.qrUrl;
+                
+                // Si la hoja no tiene URL guardada, el sistema la genera al vuelo así:
+                if(!qrData || qrData === "") {
+                    qrData = `${urlBase}?esposo=${encodeURIComponent(item.esposo)}&esposa=${encodeURIComponent(item.esposa)}`;
+                }
+
+                // Generamos la imagen del QR usando una API pública para visualización
+                const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrData)}`;
+
+                const tr = document.createElement("tr");
+                tr.className = "border-b border-gray-200 hover:bg-gray-100";
+                tr.id = `row-${index}`;
+
+                tr.innerHTML = `
+                    <td class="py-3 px-6 text-left whitespace-nowrap font-bold">${item.fila}</td>
+                    <td class="py-3 px-6 text-left">
+                        <p class="font-bold text-gray-800">${item.esposo}</p>
+                        <p class="text-xs text-gray-500">& ${item.esposa}</p>
+                    </td>
+                    <td class="py-3 px-6 text-center qr-cell">
+                        <img src="${qrImgUrl}" alt="QR" class="border p-1 rounded">
+                        <div class="text-[9px] text-gray-400 mt-1 max-w-[150px] truncate mx-auto">${qrData}</div>
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        <button onclick="simularLectura(${index}, '${qrData}')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-3 rounded text-xs transition">
+                            🤖 Leer Código
+                        </button>
+                    </td>
+                    <td class="py-3 px-6 text-center font-bold" id="res-${index}">
+                        <span class="text-gray-400">---</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- LÓGICA DE SIMULACIÓN DEL ESCÁNER ---
+        // Esta función imita EXACTAMENTE lo que hace scanner.html
+        function simularLectura(index, textoQR) {
+            const celdaRes = document.getElementById(`res-${index}`);
+            celdaRes.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-500"></i> Procesando...';
+
+            // 1. Normalización (Limpiar acentos y mayúsculas)
+            const normalizar = (texto) => {
+                if(!texto) return "";
+                return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            };
+
+            // 2. Extracción de datos del QR (Imitando la lógica real)
+            // El QR suele ser: ".../pase.html?esposo=JUAN&esposa=MARIA"
+            // Decodificamos la URL para obtener los parámetros
+            let textoLimpio = decodeURIComponent(textoQR); 
+            
+            // Simulación de búsqueda
+            // El scanner real busca coincidencias parciales de los nombres en el string
+            const encontrado = listaGlobal.find(dbItem => {
+                const dbEsposo = normalizar(dbItem.esposo);
+                const dbEsposa = normalizar(dbItem.esposa);
+                
+                // El texto del QR contiene el nombre del esposo O de la esposa?
+                const textoNormalizadoQR = normalizar(textoLimpio);
+                
+                // Verificamos si los nombres de la base de datos están DENTRO del link del QR
+                // Usamos una lógica estricta: Ambos nombres deben coincidir con la fila actual
+                // (Para evitar que "Juan Perez" haga match con "Juan Lopez")
+                
+                // Para efectos de esta prueba unitaria, comparamos si este QR pertenece a ESTA fila
+                // Si quisiéramos probar si el scanner lo encuentra en CUALQUIER lugar, haríamos el find global.
+                // Haremos la búsqueda global real:
+                
+                return textoNormalizadoQR.includes(dbEsposo) && textoNormalizadoQR.includes(dbEsposa);
+            });
+
+            // 3. Resultado
+            if (encontrado) {
+                // Verificar si encontró la persona CORRECTA (la de esta fila)
+                if (encontrado.fila === listaGlobal[index].fila) {
+                    celdaRes.innerHTML = '<span class="bg-green-100 text-green-700 py-1 px-3 rounded-full text-xs">✅ ENCONTRADO</span>';
+                    actualizarStats(true);
+                } else {
+                    celdaRes.innerHTML = '<span class="bg-yellow-100 text-yellow-700 py-1 px-3 rounded-full text-xs">⚠️ MATCH INCORRECTO</span>';
+                    console.warn(`Fila ${listaGlobal[index].fila} hizo match con fila ${encontrado.fila}`);
+                }
+            } else {
+                celdaRes.innerHTML = '<span class="bg-red-100 text-red-700 py-1 px-3 rounded-full text-xs">❌ ERROR: NO LEÍDO</span>';
+                actualizarStats(false);
+            }
+        }
+
+        // Función para probar todos uno por uno automáticamente
+        async function probarTodos() {
+            resetStats();
+            const filas = listaGlobal.length;
+            for (let i = 0; i < filas; i++) {
+                // Obtenemos el dato del QR de la misma lógica de renderizado
+                const urlBase = "https://dmendocci.github.io/cena-parejas/pase.html"; 
+                let item = listaGlobal[i];
+                let qrData = item.qrUrl || `${urlBase}?esposo=${encodeURIComponent(item.esposo)}&esposa=${encodeURIComponent(item.esposa)}`;
+                
+                simularLectura(i, qrData);
+                
+                // Pequeña pausa para que se vea bonito el proceso (y no bloquear el navegador)
+                await new Promise(r => setTimeout(r, 50)); 
+            }
+            alert("✅ Prueba masiva finalizada.");
+        }
+
+        let contOk = 0;
+        let contError = 0;
+        function resetStats() {
+            contOk = 0; contError = 0;
+            document.getElementById("statOk").innerText = "0";
+            document.getElementById("statError").innerText = "0";
+        }
+        function actualizarStats(esExito) {
+            if(esExito) contOk++; else contError++;
+            document.getElementById("statOk").innerText = contOk;
+            document.getElementById("statError").innerText = contError;
+        }
+
+        // Cargar al inicio
+        window.onload = cargarDatos;
+    </script>
+</body>
+</html>
