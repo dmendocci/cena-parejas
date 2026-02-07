@@ -129,7 +129,7 @@
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ TU URL 👇
+        // 👇 URL ACTUALIZADA DEL BACKEND V600 👇
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGfLY0KVB6GNtBzCO093lrR2jm4B2ZpfemjgkDGz1EBJpEazAvsNvtqNgoLz4zo9xFrw/exec"; 
         // =================================================================
     </script>
@@ -152,7 +152,10 @@
     <script>
         async function cargarLista() {
             try {
-                const response = await fetch(`${SCRIPT_URL}?accion=listar_asistencia`);
+                // CORRECCIÓN AQUÍ: Cambiamos 'listar_asistencia' por 'listar_envios'
+                // y agregamos el "nocache" para asegurar datos frescos.
+                const cacheBuster = `&nocache=${new Date().getTime()}`;
+                const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 const data = await response.json();
                 
                 document.getElementById("loading").style.display = "none";
@@ -160,7 +163,7 @@
                 if (data.result === "success") {
                     renderizarTarjetas(data.message);
                 } else {
-                    alert("Error: " + data.message);
+                    alert("Error del servidor: " + data.message);
                 }
             } catch (e) {
                 alert("Error cargando datos: " + e);
@@ -170,6 +173,11 @@
         function renderizarTarjetas(lista) {
             const contenedor = document.getElementById("listaTarjetas");
             const urlBasePase = "https://dmendocci.github.io/cena-parejas/pase.html";
+
+            if (lista.length === 0) {
+                contenedor.innerHTML = "<p style='text-align:center'>No hay registros disponibles.</p>";
+                return;
+            }
 
             lista.forEach((item, index) => {
                 // Generación de QR (Lógica idéntica al sistema)
