@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión V300 - NÚCLEO REPARADO</title>
+    <title>Gestión V400 - Modo Seguro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -12,17 +12,19 @@
         .btn-recordatorio { background-color: #dc2626 !important; color: white !important; }
         .btn-enviado { background-color: #9ca3af !important; color: white !important; cursor: not-allowed !important; }
         .fecha-mini { font-size: 9px; color: #4b5563; font-weight: 700; margin-top: 4px; display: block; line-height: 1; }
-        .saving-indicator { font-size: 9px; color: #d97706; display: none; font-weight:bold; margin-top:2px; }
-        /* Debugger oculto */
-        .debug-data { display: none; font-size: 8px; color: #aaa; margin-top: 2px; font-family: monospace; }
+        /* Monitor de estado */
+        .status-monitor { font-size: 8px; font-family: monospace; display: none; margin-top: 2px; }
+        .status-ok { color: green; }
+        .status-err { color: red; font-weight: bold; }
+        .status-wait { color: orange; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ TU NUEVA URL V300 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOBo7JsviVedpRRmbsPQbGwWPU1WvITHrVe3XXym8J0gtGJY376l3TXXIsNb4NFqDXDg/exec"; 
+        // 👇 PEGA AQUÍ LA NUEVA URL V400 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqz0e3mF7InBes3QmgkMY5KbkwcGnsEs9TNdD6pj_S0JBoKLXTzdcFDgKMi9pqEIvWNQ/exec"; 
         // =================================================================
         
         const MENSAJES_PAGO = [
@@ -36,7 +38,7 @@
                 <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
                     <i class="fas fa-heart text-red-600"></i> Control de Asistencia
                 </h1>
-                <p class="text-sm text-gray-500">Sistema V300 (Lectura Segura)</p>
+                <p class="text-sm text-gray-500">Sistema V400 (Diagnóstico Activo)</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
@@ -47,7 +49,7 @@
 
         <div class="mb-6 flex flex-col md:flex-row gap-4">
             <div class="relative flex-grow">
-                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full p-3 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-red-400 outline-none">
+                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full p-3 rounded-lg border border-gray-300 shadow-sm outline-none">
             </div>
             <div class="w-full md:w-1/4">
                 <select id="filterStatus" onchange="filtrarTabla()" class="w-full p-3 rounded-lg border border-gray-300 shadow-sm">
@@ -88,23 +90,32 @@
         let colaEnvios = [];
         let procesandoCola = false;
 
-        // --- COLA DE PROCESOS (Mantenemos esto porque es vital) ---
+        // --- COLA DE PROCESOS ROBUSTA ---
         async function encolarEnvioQR(fila, quien, tel, nombre, url, idBtn, idDate) {
             if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
+            
+            // 1. Abrir WhatsApp (Visual)
             const msj = `¡Hola ${nombre}! 👋 Aquí tienes tu pase para la cena: ${url}`;
             window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
 
-            // Optimismo Visual
+            // 2. Cambio Visual Inmediato
             const btn = document.getElementById(idBtn);
             const dateSpan = document.getElementById(idDate);
+            const statusSpan = document.getElementById(`status-${idDate}`);
+
             if(btn && dateSpan) {
                 const now = new Date();
                 const fechaStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                
                 btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
                 btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
                 dateSpan.innerText = `${fechaStr}`;
-                let savingEl = document.getElementById(`saving-${idDate}`);
-                if(savingEl) savingEl.style.display = "block";
+                
+                if(statusSpan) {
+                    statusSpan.style.display = "block";
+                    statusSpan.className = "status-monitor status-wait";
+                    statusSpan.innerText = "⏳ En cola...";
+                }
             }
 
             colaEnvios.push({ fila, quien, idDate });
@@ -115,16 +126,36 @@
             if (procesandoCola || colaEnvios.length === 0) return;
             procesandoCola = true;
             const tarea = colaEnvios.shift();
+            const statusSpan = document.getElementById(`status-${tarea.idDate}`);
 
             try {
-                await fetch(SCRIPT_URL, {
+                if(statusSpan) statusSpan.innerText = "🔄 Guardando en BD...";
+
+                const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify({ accion: 'registrar_envio_qr', fila: tarea.fila, quien: tarea.quien })
                 });
-                let savingEl = document.getElementById(`saving-${tarea.idDate}`);
-                if(savingEl) savingEl.style.display = "none";
+                
+                const data = await response.json();
+
+                if (data.result === "success") {
+                    if(statusSpan) {
+                        statusSpan.className = "status-monitor status-ok";
+                        statusSpan.innerText = "✅ Guardado OK";
+                        // Ocultar después de 3 seg
+                        setTimeout(() => { statusSpan.style.display = "none"; }, 3000);
+                    }
+                } else {
+                    throw new Error(data.message);
+                }
+
             } catch (error) {
                 console.error("Error cola:", error);
+                if(statusSpan) {
+                    statusSpan.className = "status-monitor status-err";
+                    statusSpan.innerText = "❌ ERROR: " + error.message;
+                    alert("⚠️ FALLO AL GUARDAR: " + error.message);
+                }
             } finally {
                 procesandoCola = false;
                 procesarCola();
@@ -141,12 +172,11 @@
         }
 
         async function cargarDatos() {
-            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V300"); return; }
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V400"); return; }
             mostrarLoader(true);
             try {
                 const cacheBuster = `&nocache=${new Date().getTime()}`;
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
-                if (!response.ok) throw new Error("Error HTTP " + response.status);
                 const data = await response.json();
                 
                 if (data.result === "success") {
@@ -156,8 +186,7 @@
                     alert("⚠️ Error del servidor: " + data.message);
                 }
             } catch (e) {
-                console.error(e);
-                alert("❌ Error: " + e.message);
+                alert("❌ Error de red: " + e.message);
             } finally {
                 mostrarLoader(false);
             }
@@ -220,7 +249,7 @@
                                 ${textEl}
                             </button>
                             <span id="${idDateEl}" class="fecha-mini">${dateEl}</span>
-                            <span id="saving-${idDateEl}" class="saving-indicator"><i class="fas fa-sync fa-spin"></i> ...</span>
+                            <span id="status-${idDateEl}" class="status-monitor"></span>
                         </div>`;
 
                     htmlAcciones += `
@@ -230,13 +259,10 @@
                                 ${textElla}
                             </button>
                             <span id="${idDateElla}" class="fecha-mini">${dateElla}</span>
-                            <span id="saving-${idDateElla}" class="saving-indicator"><i class="fas fa-sync fa-spin"></i> ...</span>
+                            <span id="status-${idDateElla}" class="status-monitor"></span>
                         </div>`;
                     
-                    htmlAcciones += `</div>`;
-                    // DEBUGGER: Muestra qué JSON recibió esta fila para descartar fallos de lectura
-                    // htmlAcciones += `<div class="debug-data text-center">RAW: ${JSON.stringify(notif)}</div>`;
-                    
+                    htmlAcciones += `</div></div>`;
                     htmlStatus = `<div class="text-center text-green-500 text-xs font-bold"><i class="fas fa-check-double"></i> Todo Listo</div>`;
                 } else {
                     let intentos = item.followUpCount || 0;
