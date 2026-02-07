@@ -18,8 +18,10 @@
 <body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
-        // === PEGA AQUÍ LA NUEVA URL ===
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec"; 
+        // =================================================================
+        // 👇👇👇 ¡PEGA AQUÍ TU NUEVA URL DE APPS SCRIPT! 👇👇👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNCmdON32mHKNK6gui6u9j_CVXVN3_HbYVJoud_jw3nZaM6PAw2gAtkBJam0NuQldwIg/exec"; 
+        // =================================================================
         
         const MENSAJES_PAGO = [
             "¡Hola [NOMBRE]! Bendiciones. Les saludamos de la pastoral de matrimonios. Hoy queremos recordarles gentilmente que tenemos pendiente su paso final del pago de su inscripción para la Cena 'Amor que Permanece'. Estamos muy contentos de poder contar con ustedes. Agradeceríamos si pueden realizarlo el día de hoy. ¡Gracias!",
@@ -101,6 +103,10 @@
         }
 
         async function cargarDatos() {
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) {
+                alert("⚠️ ERROR: No has pegado la nueva URL en el código.");
+                return;
+            }
             mostrarLoader(true);
             try {
                 // Ahora usamos 'listar_envios' que es la función optimizada en el nuevo script
