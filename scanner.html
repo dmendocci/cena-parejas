@@ -8,42 +8,53 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        .loader { border-top-color: #ec4899; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; }
+        #reader { width: 100%; min-height: 300px; background: #000; border-radius: 10px; overflow: hidden; }
         .hidden-input { display: none; }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
 
     <script>
-        // === PEGA AQUÍ LA NUEVA URL DEL SCRIPT V50 ===
+        // === URL CONFIGURADA AUTOMÁTICAMENTE ===
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBLSQ9UTUL9cD7CtwAb9ZqecvDKK2DN3XgJbZ4IMtADoucQpYG1Cm7xnuFIC28EzhI8Q/exec";
     </script>
 
     <div class="max-w-md mx-auto p-4 flex flex-col h-screen">
         
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="text-xl font-bold text-pink-500"><i class="fas fa-qrcode"></i> Entrada</h1>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold text-pink-500 flex items-center gap-2">
+                <i class="fas fa-heart"></i> Entrada
+            </h1>
             <button onclick="toggleModo()" id="btnModo" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition">
                 <i class="fas fa-list"></i> Contingencia
             </button>
         </div>
 
-        <div id="modoScanner" class="flex-grow flex flex-col items-center justify-center">
-            <div id="reader" class="bg-black shadow-lg border-2 border-pink-500"></div>
-            <p class="mt-4 text-gray-400 text-sm text-center">Escanea el código QR de la pareja</p>
-            <div id="scanResult" class="mt-4 w-full"></div>
+        <div id="modoScanner" class="flex-grow flex flex-col items-center">
+            
+            <div id="reader" class="shadow-lg border-2 border-pink-500 mb-4 relative">
+                <div class="absolute inset-0 flex items-center justify-center text-gray-500 z-0">
+                    <p>Iniciando cámara...</p>
+                </div>
+            </div>
+
+            <p class="text-gray-400 text-sm text-center mb-2">Apunta al código QR de la pareja</p>
+            
+            <div id="scanResult" class="w-full"></div>
+            
+            <button onclick="iniciarScanner()" class="mt-4 text-xs text-gray-500 underline">Reiniciar Cámara</button>
         </div>
 
         <div id="modoContingencia" class="hidden flex-grow flex flex-col">
             <div class="mb-4">
                 <input type="text" id="searchInput" onkeyup="filtrarLista()" placeholder="Buscar por nombre..." 
-                       class="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-pink-500">
+                       class="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-pink-500 placeholder-gray-500">
             </div>
             
-            <div class="flex-grow overflow-y-auto bg-gray-800 rounded-lg p-2" id="listaParejas">
-                <p class="text-center text-gray-500 mt-10">Cargando datos...</p>
+            <div class="flex-grow overflow-y-auto bg-gray-800 rounded-lg p-2 border border-gray-700" id="listaParejas">
+                <p class="text-center text-gray-500 mt-10">Cargando lista...</p>
             </div>
         </div>
 
@@ -53,57 +64,79 @@
             <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
             <h2 id="loaderText" class="text-xl font-semibold text-white">Procesando...</h2>
         </div>
-
     </div>
 
     <audio id="audioSuccess" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
     <audio id="audioError" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
 
     <script>
-        let html5QrcodeScanner;
+        let html5QrCode;
         let listaGlobal = [];
-        let filaSeleccionada = null; // Para saber a quién le estamos tomando la foto
+        let filaSeleccionada = null;
         let modoActual = "SCANNER";
 
-        // --- INICIALIZACIÓN ---
-        function onScanSuccess(decodedText, decodedResult) {
-            html5QrcodeScanner.pause();
+        window.onload = function() {
+            cargarDatos(); 
+            iniciarScanner(); 
+        };
+
+        // --- CÁMARA ROBUSTA ---
+        function iniciarScanner() {
+            if(html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    lanzarCamara();
+                }).catch(() => { lanzarCamara(); });
+            } else {
+                lanzarCamara();
+            }
+        }
+
+        function lanzarCamara() {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            // Intenta usar la cámara trasera
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                console.error("Error cámara:", err);
+                document.getElementById("reader").innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-red-400 p-4 text-center">
+                        <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                        <p>No se pudo acceder a la cámara.</p>
+                        <p class="text-xs text-gray-500 mt-2">Asegúrate de dar permisos.</p>
+                        <button onclick="iniciarScanner()" class="mt-4 bg-gray-700 px-4 py-2 rounded text-white text-xs">Reintentar</button>
+                    </div>`;
+            });
+        }
+
+        function onScanSuccess(decodedText) {
+            html5QrCode.pause(); 
             procesarEntradaQR(decodedText);
         }
 
-        // Iniciar Scanner
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render(onScanSuccess);
-        
-        // Cargar datos en segundo plano
-        cargarDatos();
-
-        // --- LÓGICA DE MODOS ---
         function toggleModo() {
             const scanDiv = document.getElementById("modoScanner");
             const contDiv = document.getElementById("modoContingencia");
             const btn = document.getElementById("btnModo");
 
             if (modoActual === "SCANNER") {
-                // Cambiar a Contingencia
                 modoActual = "CONTINGENCIA";
                 scanDiv.classList.add("hidden");
                 contDiv.classList.remove("hidden");
                 btn.innerHTML = '<i class="fas fa-qrcode"></i> Scanner';
                 btn.classList.replace("bg-blue-600", "bg-pink-600");
-                try { html5QrcodeScanner.pause(); } catch(e){}
+                try { html5QrCode.stop(); } catch(e){}
             } else {
-                // Cambiar a Scanner
                 modoActual = "SCANNER";
                 scanDiv.classList.remove("hidden");
                 contDiv.classList.add("hidden");
                 btn.innerHTML = '<i class="fas fa-list"></i> Contingencia';
                 btn.classList.replace("bg-pink-600", "bg-blue-600");
-                try { html5QrcodeScanner.resume(); } catch(e){}
+                iniciarScanner();
             }
         }
 
-        // --- CARGAR Y LISTAR DATOS ---
         async function cargarDatos() {
             try {
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_asistencia`);
@@ -120,7 +153,7 @@
             contenedor.innerHTML = "";
             
             if(lista.length === 0) {
-                contenedor.innerHTML = '<p class="text-center text-gray-500 mt-5">No hay coincidencias.</p>';
+                contenedor.innerHTML = '<p class="text-center text-gray-500 mt-5">No hay datos.</p>';
                 return;
             }
 
@@ -130,10 +163,10 @@
                 
                 let btnHtml = "";
                 if(item.asistio) {
-                    btnHtml = `<span class="text-green-400 font-bold text-xs"><i class="fas fa-check-circle"></i> Adentro</span>`;
+                    btnHtml = `<span class="text-green-400 font-bold text-xs bg-green-900 bg-opacity-30 px-2 py-1 rounded"><i class="fas fa-check-circle"></i> Adentro</span>`;
                 } else {
                     btnHtml = `<button onclick="iniciarCamara(${item.fila})" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded text-xs font-bold shadow">
-                                <i class="fas fa-camera"></i> Registrar
+                                <i class="fas fa-camera"></i> Foto
                                </button>`;
                 }
 
@@ -157,22 +190,20 @@
             renderizarLista(filtrados);
         }
 
-        // --- LÓGICA DE CÁMARA Y FOTO ---
         function iniciarCamara(fila) {
             filaSeleccionada = fila;
-            document.getElementById("cameraInput").click(); // Abre la cámara nativa
+            document.getElementById("cameraInput").click();
         }
 
         function procesarFoto() {
             const input = document.getElementById("cameraInput");
             if (input.files && input.files[0]) {
                 const file = input.files[0];
-                
                 mostrarLoader(true, "Subiendo foto...");
                 
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const base64Img = e.target.result.split(',')[1]; // Quitar cabecera "data:image..."
+                    const base64Img = e.target.result.split(',')[1];
                     enviarFotoAlServidor(filaSeleccionada, base64Img);
                 };
                 reader.readAsDataURL(file);
@@ -181,34 +212,26 @@
 
         async function enviarFotoAlServidor(fila, base64) {
             try {
-                // Usamos POST porque la imagen es grande
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        accion: 'registrar_contingencia',
-                        fila: fila,
-                        imagen: base64
-                    })
+                    body: JSON.stringify({ accion: 'registrar_contingencia', fila: fila, imagen: base64 })
                 });
-                
                 const data = await response.json();
                 
                 if (data.result === "success") {
                     document.getElementById("audioSuccess").play();
-                    alert("✅ Entrada registrada con foto.");
-                    cargarDatos(); // Recargar lista para ver el "Adentro"
+                    alert("✅ Entrada registrada correctamente.");
+                    cargarDatos();
                 } else {
                     alert("❌ Error: " + data.message);
                 }
-            } catch(e) {
-                alert("❌ Error de conexión al subir foto.");
-            } finally {
-                mostrarLoader(false);
-                document.getElementById("cameraInput").value = ""; // Limpiar input
+            } catch(e) { alert("❌ Error de subida."); } 
+            finally { 
+                mostrarLoader(false); 
+                document.getElementById("cameraInput").value = "";
             }
         }
 
-        // --- LÓGICA QR (LEGACY) ---
         function normalizar(texto) {
             if(!texto) return "";
             return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -219,7 +242,6 @@
             const textoLimpio = normalizar(textoQR).replace("registro:", "").trim();
             const partes = textoLimpio.split("&").map(s => s.trim());
             
-            // Buscar en la lista local (que ya descargamos)
             const encontrado = listaGlobal.find(item => {
                 const dbEsposo = normalizar(item.esposo);
                 const dbEsposa = normalizar(item.esposa);
@@ -228,38 +250,38 @@
 
             if (encontrado) {
                 if (encontrado.asistio) {
-                    mostrarResultado("⚠️ YA REGISTRADO", "bg-yellow-500");
+                    mostrarResultado("⚠️ YA INGRESÓ", "bg-yellow-500");
                     document.getElementById("audioError").play();
                 } else {
-                    // Registrar check-in simple
                     await fetch(`${SCRIPT_URL}?accion=marcar_asistencia&fila=${encontrado.fila}`, {method:'POST'});
-                    mostrarResultado("✅ BIENVENIDOS: " + encontrado.esposo, "bg-green-600");
+                    mostrarResultado("✅ ADELANTE: " + encontrado.esposo, "bg-green-600");
                     document.getElementById("audioSuccess").play();
-                    encontrado.asistio = true; // Actualizar local
-                    cargarDatos(); // Refrescar lista de fondo
+                    encontrado.asistio = true;
+                    cargarDatos();
                 }
             } else {
                 mostrarResultado("❌ NO ENCONTRADO", "bg-red-600");
                 document.getElementById("audioError").play();
             }
             mostrarLoader(false);
+            
             setTimeout(() => { 
                 document.getElementById("scanResult").innerHTML = ""; 
-                html5QrcodeScanner.resume();
+                html5QrCode.resume();
             }, 3000);
         }
 
         function mostrarResultado(texto, colorClass) {
-            const div = document.getElementById("scanResult");
-            div.innerHTML = `<div class="${colorClass} text-white p-4 rounded text-center font-bold text-lg shadow-lg animate-pulse">${texto}</div>`;
+            document.getElementById("scanResult").innerHTML = `
+                <div class="${colorClass} text-white p-6 rounded-lg text-center shadow-lg border-2 border-white animate-bounce">
+                    <p class="text-2xl font-bold">${texto}</p>
+                </div>`;
         }
 
         function mostrarLoader(show, text="Cargando...") {
             document.getElementById("loader").classList.toggle("hidden", !show);
             document.getElementById("loaderText").innerText = text;
         }
-
     </script>
 </body>
 </html>
-
