@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoja de Validación Manual QR</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+        .hoja { background: white; max-width: 800px; margin: 0 auto; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .instrucciones { background: #e0f7fa; padding: 15px; border-left: 5px solid #00acc1; margin-bottom: 20px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; vertical-align: middle; }
+        th { background: #eee; text-align: center; }
+        
+        .col-qr { text-align: center; width: 150px; }
+        .col-check { width: 50px; text-align: center; }
+        .qr-img { width: 120px; height: 120px; }
+        
+        .nombre-pareja { font-size: 18px; font-weight: bold; color: #2c3e50; }
+        .detalle { font-size: 12px; color: #7f8c8d; }
+
+        /* Para imprimir bonito */
+        @media print {
+            body { background: white; }
+            .hoja { box-shadow: none; margin: 0; width: 100%; max-width: 100%; }
+            .no-print { display: none; }
+            button { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        // =================================================================
+        // 👇 PEGA AQUÍ TU URL (La misma de siempre) 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpjWmqOGqN0g7FpLcokjemqf9tLOsgYjhEBFOK33I4fDjNBG3WpbKrUI6L4u89h0syHA/exec"; 
+        // =================================================================
+    </script>
+
+    <div class="hoja">
+        <div class="no-print">
+            <button onclick="window.print()" style="float:right; padding:10px 20px; background:#2ecc71; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Imprimir / Guardar PDF</button>
+        </div>
+        
+        <h1>📋 Listado para Validación Manual</h1>
+        
+        <div class="instrucciones no-print">
+            <strong>Instrucciones para el Validador:</strong>
+            <ol>
+                <li>Abre el <strong>Simulador de Scanner</strong> (`scanner.html`) en tu celular.</li>
+                <li>Ve escaneando los códigos de esta lista uno por uno.</li>
+                <li>Si el scanner dice <strong>"✅ ADELANTE"</strong> o <strong>"⚠️ YA INGRESÓ"</strong>, marca la casilla "OK".</li>
+                <li>Si no lee, marca una X.</li>
+            </ol>
+        </div>
+
+        <div id="loading" style="text-align:center; padding:50px;">Cargando datos...</div>
+
+        <table id="tablaValidacion">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre de la Pareja</th>
+                    <th>Código QR (Escanear aquí)</th>
+                    <th>¿Leído?</th>
+                </tr>
+            </thead>
+            <tbody id="contenidoTabla"></tbody>
+        </table>
+    </div>
+
+    <script>
+        async function cargarLista() {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?accion=listar_asistencia`);
+                const data = await response.json();
+                
+                document.getElementById("loading").style.display = "none";
+                
+                if (data.result === "success") {
+                    renderizar(data.message);
+                }
+            } catch (e) {
+                alert("Error cargando datos: " + e);
+            }
+        }
+
+        function renderizar(lista) {
+            const tbody = document.getElementById("contenidoTabla");
+            // URL base de tu pase (solo para generar el QR visualmente igual que en WhatsApp)
+            const urlBasePase = "https://dmendocci.github.io/cena-parejas/pase.html";
+
+            lista.forEach((item, index) => {
+                // Lógica de generación de QR idéntica al sistema
+                let qrData = item.qrUrl;
+                if(!qrData || qrData === "") {
+                    qrData = `${urlBasePase}?esposo=${encodeURIComponent(item.esposo)}&esposa=${encodeURIComponent(item.esposa)}`;
+                }
+
+                // Generador de imagen QR
+                const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td style="text-align:center; font-weight:bold;">${index + 1}</td>
+                    <td>
+                        <div class="nombre-pareja">${item.esposo}</div>
+                        <div class="nombre-pareja" style="margin-top:5px;">& ${item.esposa}</div>
+                        <div class="detalle" style="margin-top:5px;">Fila: ${item.fila}</div>
+                    </td>
+                    <td class="col-qr">
+                        <img src="${qrImg}" class="qr-img" alt="QR">
+                    </td>
+                    <td class="col-check">
+                        <div style="width:30px; height:30px; border:2px solid #333; margin:0 auto;"></div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.onload = cargarLista;
+    </script>
+</body>
+</html>
