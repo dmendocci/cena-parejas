@@ -6,7 +6,7 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión V700 - NO CACHE</title>
+    <title>Gestión V900 - QR LINK</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -25,7 +25,7 @@
 
     <script>
         // =================================================================
-        // 👇 PEGA AQUÍ LA URL "VIRGEN" QUE ACABAS DE CREAR 👇
+        // 👇 URL DEL BACKEND V600 (NO CAMBIAR) 👇
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGfLY0KVB6GNtBzCO093lrR2jm4B2ZpfemjgkDGz1EBJpEazAvsNvtqNgoLz4zo9xFrw/exec"; 
         // =================================================================
         
@@ -40,11 +40,11 @@
                 <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
                     <i class="fas fa-heart text-red-600"></i> Control de Asistencia
                 </h1>
-                <p class="text-sm text-gray-500">Sistema V700 (Cache Buster)</p>
+                <p class="text-sm text-gray-500">Sistema V900 (Doble Link)</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="forzarRecarga()" class="bg-red-600 text-white px-5 py-2 rounded-lg shadow hover:bg-red-700 flex items-center gap-2">
-                    <i class="fas fa-bomb"></i> Reset Total
+                    <i class="fas fa-bomb"></i> Reset
                 </button>
                 <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
                     <i class="fas fa-sync-alt"></i> Actualizar
@@ -95,16 +95,38 @@
         let colaEnvios = [];
         let procesandoCola = false;
 
-        function forzarRecarga() {
-            // Esto borra la caché de la página actual y recarga forzosamente del servidor
-            window.location.reload(true);
+        function forzarRecarga() { window.location.reload(true); }
+
+        function limpiarParaQR(texto) {
+            if (!texto) return "";
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         }
 
-        async function encolarEnvioQR(fila, quien, tel, nombre, url, idBtn, idDate) {
+        // ==========================================
+        // 🔥 LÓGICA DE MENSAJE DOBLE 🔥
+        // ==========================================
+        async function procesarEnvioV900(fila, quien, tel, esposo, esposa, url, idBtn, idDate) {
             if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
-            const msj = `¡Hola ${nombre}! 👋 Aquí tienes tu pase para la cena: ${url}`;
+            
+            // 1. Definir nombres limpios
+            let nombreSaludo = (quien === 'el') ? esposo : esposa;
+            let dataQR = `REGISTRO: ${limpiarParaQR(esposo)} & ${limpiarParaQR(esposa)}`;
+            
+            // 2. Crear Link de IMAGEN (Esto hace que aparezca el link azul en WhatsApp)
+            // Usamos un servicio externo para crear la imagen al vuelo
+            let linkImagenQR = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(dataQR)}`;
+
+            // 3. CONSTRUCCIÓN DEL MENSAJE (Usamos %0A para saltos de línea seguros)
+            // WhatsApp no adjunta imagenes desde web, pero este link permitirá verla.
+            let msj = `¡Hola ${nombreSaludo}! 👋\n\n`;
+            msj += `✅ *PASE DIGITAL:*\n${url}\n\n`;
+            msj += `🔳 *CÓDIGO QR DIRECTO:*\n${linkImagenQR}\n\n`;
+            msj += `(Presenta cualquiera de los dos en la entrada)`;
+
+            // 4. Abrir WhatsApp
             window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
 
+            // 5. Actualización Visual
             const btn = document.getElementById(idBtn);
             const dateSpan = document.getElementById(idDate);
             const statusSpan = document.getElementById(`status-${idDate}`);
@@ -121,6 +143,8 @@
                     statusSpan.innerText = "⏳ En cola...";
                 }
             }
+            
+            // 6. Encolar guardado en servidor
             colaEnvios.push({ fila, quien, idDate });
             procesarCola();
         }
@@ -134,9 +158,7 @@
             try {
                 if(statusSpan) statusSpan.innerText = "🔄 Guardando...";
                 
-                // 🔥 CACHE BUSTER EN EL POST TAMBIÉN 🔥
                 const uniqueId = new Date().getTime() + Math.random();
-                
                 const response = await fetch(`${SCRIPT_URL}?uid=${uniqueId}`, {
                     method: 'POST',
                     body: JSON.stringify({ accion: 'registrar_envio_qr', fila: tarea.fila, quien: tarea.quien })
@@ -156,7 +178,7 @@
             } catch (error) {
                 if(statusSpan) {
                     statusSpan.className = "status-monitor status-err";
-                    statusSpan.innerText = "❌ ERROR: " + error.message;
+                    statusSpan.innerText = "❌ ERROR";
                     alert("⚠️ FALLO AL GUARDAR: " + error.message);
                 }
             } finally {
@@ -171,18 +193,14 @@
             if (tel.length < 5) return "#"; 
             const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
             const urlBase = esMovil ? "https://api.whatsapp.com/send" : "https://web.whatsapp.com/send";
+            // encodeURIComponent envuelve todo el mensaje para que no se rompa
             return `${urlBase}?phone=${tel}&text=${encodeURIComponent(mensaje)}`;
         }
 
         async function cargarDatos() {
-            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la nueva URL V700"); return; }
             mostrarLoader(true);
             try {
-                // 🔥 SÚPER CACHE BUSTER 🔥
-                // Agregamos un número aleatorio GIGANTE para que el navegador NO pueda usar memoria vieja
                 const cacheBuster = `&nocache=${new Date().getTime()}_${Math.random()}`;
-                console.log("Solicitando datos nuevos...", cacheBuster);
-                
                 const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 const data = await response.json();
                 
@@ -249,9 +267,11 @@
                     }
                     htmlAcciones += `<div class="flex gap-4">`;
                     
+                    // 🔥 AQUÍ SE LLAMA A LA NUEVA FUNCIÓN V900 🔥
+                    // Pasamos 'item.esposo' y 'item.esposa' correctamente
                     htmlAcciones += `
                         <div class="text-center w-24">
-                            <button id="${idBtnEl}" onclick="encolarEnvioQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" 
+                            <button id="${idBtnEl}" onclick="procesarEnvioV900(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.esposa}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" 
                                     class="${classEl} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textEl}
                             </button>
@@ -261,7 +281,7 @@
 
                     htmlAcciones += `
                         <div class="text-center w-24">
-                            <button id="${idBtnElla}" onclick="encolarEnvioQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" 
+                            <button id="${idBtnElla}" onclick="procesarEnvioV900(${item.fila}, 'ella', '${item.tel2}', '${item.esposo}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" 
                                     class="${classElla} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
                                 ${textElla}
                             </button>
