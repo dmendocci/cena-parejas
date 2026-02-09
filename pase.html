@@ -2,124 +2,116 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pase de Entrada - Cena "Amor que Permanece"</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Pase de Entrada</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+    
     <style>
-        body {
-            background-color: #f3f4f6;
-            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23e5e7eb' fill-opacity='0.4' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+        /* --- TU DISEÑO ORIGINAL INTACTO --- */
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #b71c1c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; 
         }
-        .ticket {
-            background: white;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
+
+        .pass-container {
             position: relative;
+            width: 100%;
+            max-width: 450px; 
+            aspect-ratio: 9 / 16; 
+            max-height: 100vh;
+            margin: 0 auto;
+            background-image: url('tarjeta.jpeg'); 
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
         }
-        .ticket::before, .ticket::after {
-            content: "";
+
+        /* NOMBRES */
+        .names-overlay {
             position: absolute;
-            background-color: #f3f4f6;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            top: 50%;
-            transform: translateY(-50%);
+            top: 35%;  
+            left: 50%;
+            transform: translate(-50%, 0);
+            width: 90%;
+            text-align: center;
+            font-family: 'Great Vibes', cursive;
+            font-size: 2.2rem; 
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            line-height: 1.1;
             z-index: 10;
         }
-        .ticket::before { left: -15px; }
-        .ticket::after { right: -15px; }
-        
-        .dashed-line {
-            border-top: 2px dashed #e5e7eb;
-            margin: 20px 0;
-            position: relative;
+
+        /* QR: POSICIÓN ORIGINAL */
+        .qr-overlay {
+            position: absolute;
+            top: 69%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            
+            background-color: white;
+            padding: 10px; 
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         
-        .qr-container img {
-            width: 200px; /* Tamaño Mediano */
-            height: 200px;
-            margin: 0 auto;
-            border: 4px solid white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-radius: 10px;
+        #qrcode img {
+            display: block;
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body>
 
-    <div class="ticket w-full max-w-sm text-center">
-        <div class="bg-red-700 text-white p-6">
-            <h1 class="text-2xl font-bold uppercase tracking-wider">Pase de Cena</h1>
-            <p class="text-red-200 text-sm mt-1">"Amor que Permanece"</p>
-        </div>
-
-        <div class="p-6">
-            <div class="mb-6">
-                <p class="text-gray-500 text-xs uppercase font-bold tracking-widest mb-1">Invitados</p>
-                <h2 id="nombreEsposo" class="text-xl font-bold text-gray-800">Cargando...</h2>
-                <div class="text-red-500 font-bold">&</div>
-                <h2 id="nombreEsposa" class="text-xl font-bold text-gray-800">Cargando...</h2>
-            </div>
-
-            <div class="dashed-line"></div>
-
-            <div class="mb-4">
-                <p class="text-gray-400 text-xs mb-3">Presenta este código en la entrada</p>
-                <div id="qrContainer" class="qr-container">
-                    <i class="fas fa-spinner fa-spin text-4xl text-gray-300"></i>
-                </div>
-            </div>
-
-            <div class="bg-green-50 text-green-700 px-4 py-2 rounded-lg text-sm font-semibold inline-block border border-green-200">
-                <i class="fas fa-check-circle"></i> Acceso Confirmado
-            </div>
-        </div>
-
-        <div class="bg-gray-50 p-4 border-t border-gray-100 text-xs text-gray-400">
-            <p>13 de Febrero | 7:00 PM</p>
-            <p>Pastoral de Matrimonios</p>
-        </div>
+    <div class="pass-container">
+        <div class="names-overlay" id="displayNames"></div>
+        <div class="qr-overlay" id="qrcode"></div>
     </div>
 
     <script>
-        window.onload = function() {
-            // 1. Obtener parámetros de la URL
-            const params = new URLSearchParams(window.location.search);
-            const esposo = params.get('esposo');
-            const esposa = params.get('esposa');
+        // 1. Obtener parámetros (URLSearchParams ya decodifica automáticamente)
+        const params = new URLSearchParams(window.location.search);
+        
+        // Obtenemos los nombres directamente (ya vienen con tildes si las traían)
+        const nombreEsposo = params.get('esposo') || "Luis Alonso Lopez Caceres";
+        const nombreEsposa = params.get('esposa') || "Maria Jose Ordoñez Andara";
 
-            // 2. Validar si hay datos
-            if (esposo && esposa) {
-                // Escribir nombres en el HTML
-                document.getElementById('nombreEsposo').textContent = esposo;
-                document.getElementById('nombreEsposa').textContent = esposa;
+        // 2. MOSTRAR EN PANTALLA (Se verán bonitos, con tildes)
+        document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
 
-                // 3. Generar la URL del QR
-                // El QR contiene la URL actual completa para que el scanner la lea y verifique
-                const currentUrl = window.location.href;
-                
-                // Usamos una API rápida para generar la imagen
-                const qrSize = "300x300"; // Tamaño de la imagen generada
-                const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}&data=${encodeURIComponent(currentUrl)}&bgcolor=ffffff`;
+        // 3. FUNCIÓN DE LIMPIEZA TÉCNICA (El secreto para que el QR no falle)
+        // Convierte "Rosalía" en "Rosalia" solo para el generador QR
+        function limpiarParaQR(texto) {
+            if (!texto) return "";
+            return texto
+                .normalize("NFD") // Separa la vocal de la tilde
+                .replace(/[\u0300-\u036f]/g, "") // Elimina la tilde
+                .trim();
+        }
 
-                // Insertar imagen
-                const img = document.createElement('img');
-                img.src = qrApi;
-                img.alt = "Código QR de Acceso";
-                
-                const container = document.getElementById('qrContainer');
-                container.innerHTML = ''; // Limpiar spinner
-                container.appendChild(img);
+        // Usamos la versión limpia para el texto del QR
+        const textoQR = `REGISTRO: ${limpiarParaQR(nombreEsposo)} & ${limpiarParaQR(nombreEsposa)}`;
 
-            } else {
-                // Si alguien entra sin link correcto
-                document.body.innerHTML = "<div class='text-center p-10 text-gray-500'><h1>⚠️ Enlace incompleto</h1><p>Por favor utiliza el enlace enviado por WhatsApp.</p></div>";
-            }
-        };
+        // Limpiamos el contenedor por si acaso
+        document.getElementById("qrcode").innerHTML = "";
+
+        // Generamos el QR con el texto seguro
+        new QRCode(document.getElementById("qrcode"), {
+            text: textoQR,
+            width: 200,
+            height: 200,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.M
+        });
     </script>
+
 </body>
 </html>
