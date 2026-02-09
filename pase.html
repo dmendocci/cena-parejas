@@ -2,116 +2,350 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Pase de Entrada</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
-    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión V800 - CON QR EN WHATSAPP</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* --- TU DISEÑO ORIGINAL INTACTO --- */
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: #b71c1c;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden; 
-        }
-
-        .pass-container {
-            position: relative;
-            width: 100%;
-            max-width: 450px; 
-            aspect-ratio: 9 / 16; 
-            max-height: 100vh;
-            margin: 0 auto;
-            background-image: url('tarjeta.jpeg'); 
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-
-        /* NOMBRES */
-        .names-overlay {
-            position: absolute;
-            top: 35%;  
-            left: 50%;
-            transform: translate(-50%, 0);
-            width: 90%;
-            text-align: center;
-            font-family: 'Great Vibes', cursive;
-            font-size: 2.2rem; 
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            line-height: 1.1;
-            z-index: 10;
-        }
-
-        /* QR: POSICIÓN ORIGINAL */
-        .qr-overlay {
-            position: absolute;
-            top: 69%; 
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10;
-            
-            background-color: white;
-            padding: 10px; 
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        
-        #qrcode img {
-            display: block;
-        }
+        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-recordatorio { background-color: #dc2626 !important; color: white !important; }
+        .btn-enviado { background-color: #9ca3af !important; color: white !important; cursor: not-allowed !important; }
+        .fecha-mini { font-size: 9px; color: #4b5563; font-weight: 700; margin-top: 4px; display: block; line-height: 1; }
+        .status-monitor { font-size: 8px; font-family: monospace; display: none; margin-top: 2px; }
+        .status-ok { color: green; }
+        .status-err { color: red; font-weight: bold; }
+        .status-wait { color: orange; }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-800 font-sans">
 
-    <div class="pass-container">
-        <div class="names-overlay" id="displayNames"></div>
-        <div class="qr-overlay" id="qrcode"></div>
+    <script>
+        // =================================================================
+        // 👇 PEGA AQUÍ LA URL DEL BACKEND V600 (La que termina en /exec) 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGfLY0KVB6GNtBzCO093lrR2jm4B2ZpfemjgkDGz1EBJpEazAvsNvtqNgoLz4zo9xFrw/exec"; 
+        // =================================================================
+        
+        const MENSAJES_PAGO = [
+            "¡Hola [NOMBRE]! Bendiciones...", "¡Bendiciones [NOMBRE]!...", "¡Hola [NOMBRE]!...", "¡Saludos hermanos!...", "¡Hola [NOMBRE]!..."
+        ];
+    </script>
+
+    <div class="max-w-7xl mx-auto p-4">
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-md border-t-4 border-red-700">
+            <div class="mb-4 md:mb-0">
+                <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
+                    <i class="fas fa-heart text-red-600"></i> Control de Asistencia
+                </h1>
+                <p class="text-sm text-gray-500">Sistema V800 (QR en Mensaje)</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="forzarRecarga()" class="bg-red-600 text-white px-5 py-2 rounded-lg shadow hover:bg-red-700 flex items-center gap-2">
+                    <i class="fas fa-bomb"></i> Reset Total
+                </button>
+                <button onclick="cargarDatos()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Actualizar
+                </button>
+            </div>
+        </header>
+
+        <div class="mb-6 flex flex-col md:flex-row gap-4">
+            <div class="relative flex-grow">
+                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full p-3 rounded-lg border border-gray-300 shadow-sm outline-none">
+            </div>
+            <div class="w-full md:w-1/4">
+                <select id="filterStatus" onchange="filtrarTabla()" class="w-full p-3 rounded-lg border border-gray-300 shadow-sm">
+                    <option value="TODOS">Todas las Parejas</option>
+                    <option value="PENDIENTE">⚠️ Pendientes</option>
+                    <option value="PAGADO">✅ Pagados</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200">
+                            <th class="px-5 py-3 w-1/3">Pareja</th>
+                            <th class="px-5 py-3 text-center w-1/6">Estado</th>
+                            <th class="px-5 py-3 text-center w-1/3">Acciones</th>
+                            <th class="px-5 py-3 text-center w-1/6">Seguimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCuerpo" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="hidden p-10 text-center text-gray-500">
+                <p>No se encontraron datos.</p>
+            </div>
+        </div>
+        
+        <div id="loader" class="fixed top-0 left-0 w-full h-full bg-white bg-opacity-90 flex flex-col justify-center items-center z-50 hidden backdrop-filter backdrop-blur-sm">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
+            <h2 class="text-xl font-semibold text-gray-700">Cargando...</h2>
+        </div>
     </div>
 
     <script>
-        // 1. Obtener parámetros (URLSearchParams ya decodifica automáticamente)
-        const params = new URLSearchParams(window.location.search);
-        
-        // Obtenemos los nombres directamente (ya vienen con tildes si las traían)
-        const nombreEsposo = params.get('esposo') || "Luis Alonso Lopez Caceres";
-        const nombreEsposa = params.get('esposa') || "Maria Jose Ordoñez Andara";
+        let datosGlobales = [];
+        let colaEnvios = [];
+        let procesandoCola = false;
 
-        // 2. MOSTRAR EN PANTALLA (Se verán bonitos, con tildes)
-        document.getElementById('displayNames').innerHTML = `${nombreEsposo} <br>&<br> ${nombreEsposa}`;
+        function forzarRecarga() { window.location.reload(true); }
 
-        // 3. FUNCIÓN DE LIMPIEZA TÉCNICA (El secreto para que el QR no falle)
-        // Convierte "Rosalía" en "Rosalia" solo para el generador QR
+        // --- FUNCIONES DE LIMPIEZA DE TEXTO (IGUAL QUE EN PASE.HTML) ---
         function limpiarParaQR(texto) {
             if (!texto) return "";
-            return texto
-                .normalize("NFD") // Separa la vocal de la tilde
-                .replace(/[\u0300-\u036f]/g, "") // Elimina la tilde
-                .trim();
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         }
 
-        // Usamos la versión limpia para el texto del QR
-        const textoQR = `REGISTRO: ${limpiarParaQR(nombreEsposo)} & ${limpiarParaQR(nombreEsposa)}`;
+        // --- NUEVA LÓGICA DE ENVÍO CON FOTO ---
+        async function encolarEnvioQR(fila, quien, tel, esposo, esposa, url, idBtn, idDate) {
+            if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
+            
+            // 1. Determinar a quién saludamos
+            let nombreSaludo = (quien === 'el') ? esposo : esposa;
 
-        // Limpiamos el contenedor por si acaso
-        document.getElementById("qrcode").innerHTML = "";
+            // 2. Generar DATA del QR (Exactamente como lo espera el scanner)
+            let dataQR = `REGISTRO: ${limpiarParaQR(esposo)} & ${limpiarParaQR(esposa)}`;
+            
+            // 3. Crear Link de IMAGEN del QR (API Externa)
+            let linkImagenQR = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(dataQR)}`;
 
-        // Generamos el QR con el texto seguro
-        new QRCode(document.getElementById("qrcode"), {
-            text: textoQR,
-            width: 200,
-            height: 200,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.M
-        });
+            // 4. Construir Mensaje de WhatsApp
+            const msj = `¡Hola ${nombreSaludo}! 👋\n\nAquí tienes tu Pase de Entrada para la Cena:\n🔗 ${url}\n\n👇 También te adjunto la imagen directa de tu código QR:\n🖼️ ${linkImagenQR}`;
+            
+            // 5. Abrir WhatsApp
+            window.open(obtenerLinkWhatsApp(tel, msj), '_blank');
+
+            // 6. Actualización Visual (Cola Segura)
+            const btn = document.getElementById(idBtn);
+            const dateSpan = document.getElementById(idDate);
+            const statusSpan = document.getElementById(`status-${idDate}`);
+
+            if(btn && dateSpan) {
+                const now = new Date();
+                const fechaStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                btn.className = "bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center";
+                btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
+                dateSpan.innerText = `${fechaStr}`;
+                if(statusSpan) {
+                    statusSpan.style.display = "block";
+                    statusSpan.className = "status-monitor status-wait";
+                    statusSpan.innerText = "⏳ En cola...";
+                }
+            }
+            colaEnvios.push({ fila, quien, idDate });
+            procesarCola();
+        }
+
+        async function procesarCola() {
+            if (procesandoCola || colaEnvios.length === 0) return;
+            procesandoCola = true;
+            const tarea = colaEnvios.shift();
+            const statusSpan = document.getElementById(`status-${tarea.idDate}`);
+
+            try {
+                if(statusSpan) statusSpan.innerText = "🔄 Guardando...";
+                
+                const uniqueId = new Date().getTime() + Math.random();
+                const response = await fetch(`${SCRIPT_URL}?uid=${uniqueId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ accion: 'registrar_envio_qr', fila: tarea.fila, quien: tarea.quien })
+                });
+                
+                const data = await response.json();
+
+                if (data.result === "success") {
+                    if(statusSpan) {
+                        statusSpan.className = "status-monitor status-ok";
+                        statusSpan.innerText = "✅ OK";
+                        setTimeout(() => { statusSpan.style.display = "none"; }, 3000);
+                    }
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                if(statusSpan) {
+                    statusSpan.className = "status-monitor status-err";
+                    statusSpan.innerText = "❌ ERROR";
+                    alert("⚠️ FALLO AL GUARDAR: " + error.message);
+                }
+            } finally {
+                procesandoCola = false;
+                procesarCola();
+            }
+        }
+
+        function obtenerLinkWhatsApp(telefono, mensaje) {
+            let tel = telefono ? telefono.toString().replace(/\D/g, '') : "";
+            if (tel.length === 8) tel = '504' + tel;
+            if (tel.length < 5) return "#"; 
+            const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
+            const urlBase = esMovil ? "https://api.whatsapp.com/send" : "https://web.whatsapp.com/send";
+            return `${urlBase}?phone=${tel}&text=${encodeURIComponent(mensaje)}`;
+        }
+
+        async function cargarDatos() {
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la URL del Backend"); return; }
+            mostrarLoader(true);
+            try {
+                const cacheBuster = `&nocache=${new Date().getTime()}_${Math.random()}`;
+                const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
+                const data = await response.json();
+                
+                if (data.result === "success") {
+                    datosGlobales = data.message;
+                    filtrarTabla();
+                } else {
+                    alert("⚠️ Error del servidor: " + data.message);
+                }
+            } catch (e) {
+                alert("❌ Error de red: " + e.message);
+            } finally {
+                mostrarLoader(false);
+            }
+        }
+
+        function renderizarTabla(lista) {
+            const tbody = document.getElementById("tablaCuerpo");
+            const emptyState = document.getElementById("emptyState");
+            tbody.innerHTML = "";
+
+            if (lista.length === 0) { emptyState.classList.remove("hidden"); return; }
+            else { emptyState.classList.add("hidden"); }
+
+            lista.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-red-50 transition duration-150";
+
+                let htmlPareja = `
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-2"><span class="font-bold text-gray-900">${item.esposo}</span></div>
+                        <div class="text-xs text-gray-500 ml-1"><i class="fab fa-whatsapp text-green-500"></i> ${item.tel1 || '---'}</div>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <div class="flex items-center gap-2"><span class="font-bold text-gray-900">${item.esposa}</span></div>
+                        <div class="text-xs text-gray-500 ml-1"><i class="fab fa-whatsapp text-green-500"></i> ${item.tel2 || '---'}</div>
+                    </div>`;
+
+                let htmlPago = item.tienePago 
+                    ? `<span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">PAGADO</span>`
+                    : `<span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">PENDIENTE</span>`;
+
+                let htmlAcciones = "";
+                let htmlStatus = ""; 
+
+                if (item.tienePago) {
+                    let notif = item.notificacion || { el: {c:0, t:''}, ella: {c:0, t:''} };
+                    
+                    const idBtnEl = `btn-el-${item.fila}`;
+                    const idDateEl = `date-el-${item.fila}`;
+                    const idBtnElla = `btn-ella-${item.fila}`;
+                    const idDateElla = `date-ella-${item.fila}`;
+
+                    let classEl = (notif.el.c > 0) ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
+                    let textEl = (notif.el.c > 0) ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Él`;
+                    let dateEl = (notif.el.c > 0) ? `${notif.el.t}` : "";
+
+                    let classElla = (notif.ella.c > 0) ? "bg-gray-500 hover:bg-gray-600" : "bg-green-600 hover:bg-green-700";
+                    let textElla = (notif.ella.c > 0) ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Ella`;
+                    let dateElla = (notif.ella.c > 0) ? `${notif.ella.t}` : "";
+
+                    htmlAcciones += `<div class="flex flex-col items-center gap-2">`;
+                    if(item.qrUrl) {
+                        htmlAcciones += `<a href="${item.qrUrl}" target="_blank" class="text-blue-600 text-xs font-bold underline mb-1">Ver QR Generado</a>`;
+                    }
+                    htmlAcciones += `<div class="flex gap-4">`;
+                    
+                    // Botón Él (Pasamos AMBOS nombres: esposo y esposa)
+                    htmlAcciones += `
+                        <div class="text-center w-24">
+                            <button id="${idBtnEl}" onclick="encolarEnvioQR(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.esposa}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" 
+                                    class="${classEl} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
+                                ${textEl}
+                            </button>
+                            <span id="${idDateEl}" class="fecha-mini">${dateEl}</span>
+                            <span id="status-${idDateEl}" class="status-monitor"></span>
+                        </div>`;
+
+                    // Botón Ella (Pasamos AMBOS nombres: esposo y esposa)
+                    htmlAcciones += `
+                        <div class="text-center w-24">
+                            <button id="${idBtnElla}" onclick="encolarEnvioQR(${item.fila}, 'ella', '${item.tel2}', '${item.esposo}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" 
+                                    class="${classElla} text-white px-3 py-1 rounded text-xs transition shadow w-full h-8 flex items-center justify-center">
+                                ${textElla}
+                            </button>
+                            <span id="${idDateElla}" class="fecha-mini">${dateElla}</span>
+                            <span id="status-${idDateElla}" class="status-monitor"></span>
+                        </div>`;
+                    
+                    htmlAcciones += `</div></div>`;
+                    htmlStatus = `<div class="text-center text-green-500 text-xs font-bold"><i class="fas fa-check-double"></i> Todo Listo</div>`;
+                } else {
+                    let intentos = item.followUpCount || 0;
+                    let indiceMensaje = Math.min(intentos, MENSAJES_PAGO.length - 1);
+                    
+                    htmlAcciones += `
+                    <div class="flex flex-col items-center bg-gray-50 p-2 rounded border border-gray-200 w-full">
+                        <span class="text-red-800 font-bold text-[9px] uppercase mb-2">RECORDAR PAGO</span>
+                        <div class="flex gap-2 mb-1">
+                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel1}', '${item.esposo}', ${intentos}, this)" class="btn-recordatorio px-3 py-1 rounded text-xs font-bold transition">Él</button>
+                            <button onclick="enviarRecordatorio(${item.fila}, '${item.tel2}', '${item.esposa}', ${intentos}, this)" class="btn-recordatorio px-3 py-1 rounded text-xs font-bold transition">Ella</button>
+                        </div>
+                        <span class="text-[9px] text-gray-500 italic">Msj ${indiceMensaje + 1}</span>
+                    </div>`;
+
+                    let width = Math.min((intentos / 5) * 100, 100);
+                    let colorBarra = intentos >= 4 ? "bg-red-500" : "bg-yellow-500";
+                    htmlStatus = `
+                        <div class="w-full max-w-[100px] mx-auto">
+                            <div class="flex justify-between text-[9px] text-gray-500 mb-1">
+                                <span>Nivel</span><span>${intentos}/5</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="${colorBarra} h-2 rounded-full" style="width: ${width}%"></div>
+                            </div>
+                        </div>`;
+                }
+                tr.innerHTML = `<td class="px-5 py-4 bg-white text-sm border-r border-gray-100">${htmlPareja}</td>
+                                <td class="px-5 py-4 bg-white text-center border-r border-gray-100">${htmlPago}</td>
+                                <td class="px-5 py-4 bg-white text-center border-r border-gray-100">${htmlAcciones}</td>
+                                <td class="px-5 py-4 bg-white text-center">${htmlStatus}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function enviarRecordatorio(fila, tel, nombre, intentos, btn) {
+            const msj = MENSAJES_PAGO[Math.min(intentos, MENSAJES_PAGO.length-1)].replace("[NOMBRE]", nombre);
+            const link = obtenerLinkWhatsApp(tel, msj);
+            if(link === "#") { alert("⚠️ Teléfono no válido."); return; }
+            window.open(link, '_blank');
+            btn.classList.add("btn-enviado");
+            btn.innerText = "Enviado";
+            btn.disabled = true;
+            fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, {method: 'POST'});
+        }
+
+        function filtrarTabla() {
+            const texto = document.getElementById("searchInput").value.toLowerCase();
+            const estado = document.getElementById("filterStatus").value;
+            const filtrados = datosGlobales.filter(item => {
+                const matchTexto = (item.esposo && item.esposo.toLowerCase().includes(texto)) || 
+                                   (item.esposa && item.esposa.toLowerCase().includes(texto));
+                let matchEstado = true;
+                if (estado === "PAGADO") matchEstado = item.tienePago === true;
+                if (estado === "PENDIENTE") matchEstado = item.tienePago === false;
+                return matchTexto && matchEstado;
+            });
+            renderizarTabla(filtrados);
+        }
+        
+        function mostrarLoader(show) { document.getElementById("loader").classList.toggle("hidden", !show); }
+        window.onload = cargarDatos;
     </script>
-
 </body>
 </html>
