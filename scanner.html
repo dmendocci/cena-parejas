@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Entrada PRO</title>
+    <title>Scanner Entrada</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -18,8 +18,8 @@
 
     <script>
         // =================================================================
-        // 👇 URL CORRECTA DEL SERVIDOR V700 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzKQCHQuXvaHldPXksVJ_XJ9UvV_eRRLwQZ94apTTNtMPZL3d0fFFAIIWhKg6CC2REzlA/exec";
+        // 👇👇👇 URL ACTUALIZADA AL BACKEND V700 👇👇👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzV9PCpc17TBRmyCXY1kEW3QPIf4zTHSirqrBp90rq0Rg9E2hKbx6gMPdVng9-0ywpycA/exec";
         // =================================================================
     </script>
 
@@ -141,14 +141,15 @@
 
         async function cargarDatos() {
             try {
-                // 🔥 FIX: Actualizado a listar_envios con Anti-Caché 🔥
-                const response = await fetch(`${SCRIPT_URL}?accion=listar_envios&nocache=${Date.now()}`);
+                // CORRECCIÓN: Agregado el Anti-Caché y usando la acción listar_envios
+                const cacheBuster = `&nocache=${new Date().getTime()}`;
+                const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
                 const data = await response.json();
                 if(data.result === "success") {
                     listaGlobal = data.message;
                     renderizarLista(listaGlobal);
                 }
-            } catch(e) { console.error("Error cargando lista"); }
+            } catch(e) { console.error("Error cargando lista", e); }
         }
 
         function renderizarLista(lista) {
