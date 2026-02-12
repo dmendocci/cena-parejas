@@ -2,186 +2,249 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCANNER DE ACCESO</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <title>Gestión V1100</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #000; color: white; } 
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; border: 2px solid #444; }
-        .resultado-box { animation: popIn 0.3s ease-out; }
-        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-recordatorio { background-color: #dc2626 !important; color: white !important; }
+        .btn-enviado { background-color: #9ca3af !important; color: white !important; cursor: not-allowed !important; }
+        .fecha-mini { font-size: 9px; color: #4b5563; font-weight: 700; margin-top: 4px; display: block; line-height: 1; }
+        .status-monitor { font-size: 8px; font-family: monospace; display: none; margin-top: 2px; }
+        .status-ok { color: green; }
+        .status-err { color: red; font-weight: bold; }
+        .status-wait { color: orange; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 justify-center">
+<body class="bg-gray-100 text-gray-800 font-sans">
 
     <script>
         // =================================================================
-        // 👇 URL BACKEND V600 (Núcleo Híbrido) 👇
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGfLY0KVB6GNtBzCO093lrR2jm4B2ZpfemjgkDGz1EBJpEazAvsNvtqNgoLz4zo9xFrw/exec"; 
+        // 👇 PEGA AQUÍ LA NUEVA URL DEL BACKEND V700 👇
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzKQCHQuXvaHldPXksVJ_XJ9UvV_eRRLwQZ94apTTNtMPZL3d0fFFAIIWhKg6CC2REzlA/exec"; 
         // =================================================================
+        
+        const MENSAJES_PAGO = [
+            "¡Hola [NOMBRE]! Bendiciones...", "¡Bendiciones [NOMBRE]!...", "¡Hola [NOMBRE]!...", "¡Saludos hermanos!...", "¡Hola [NOMBRE]!..."
+        ];
     </script>
 
-    <div class="w-full max-w-md mb-6 text-center">
-        <h1 class="text-3xl font-bold text-white mb-2">📷 Scanner de Entrada</h1>
-        <p class="text-gray-400 text-sm">Apunte la cámara al código QR</p>
-    </div>
+    <div class="max-w-7xl mx-auto p-4">
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-md border-t-4 border-red-700">
+            <div class="mb-4 md:mb-0">
+                <h1 class="text-2xl font-bold text-red-800 flex items-center gap-2">
+                    <i class="fas fa-heart text-red-600"></i> Control de Asistencia
+                </h1>
+                <p class="text-sm text-gray-500">Sistema V1100 (Final)</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="window.location.reload(true)" class="bg-red-600 text-white px-5 py-2 rounded-lg shadow hover:bg-red-700 flex items-center gap-2">
+                    <i class="fas fa-bomb"></i> Reset
+                </button>
+                <button onclick="cargarDatosV1100()" class="bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Actualizar
+                </button>
+            </div>
+        </header>
 
-    <div class="w-full max-w-md relative mb-4">
-        <div id="reader"></div>
-        <div id="loadingOverlay" class="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-10">
-            <i class="fas fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
-            <p class="text-lg font-bold">Sincronizando lista...</p>
+        <div class="mb-6 flex flex-col md:flex-row gap-4">
+            <div class="relative flex-grow">
+                <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar..." class="w-full p-3 rounded-lg border border-gray-300 shadow-sm outline-none">
+            </div>
+            <div class="w-full md:w-1/4">
+                <select id="filterStatus" onchange="filtrarTabla()" class="w-full p-3 rounded-lg border border-gray-300 shadow-sm">
+                    <option value="TODOS">Todas las Parejas</option>
+                    <option value="PENDIENTE">⚠️ Pendientes</option>
+                    <option value="PAGADO">✅ Pagados</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-b border-gray-200">
+                            <th class="px-5 py-3 w-1/3">Pareja</th>
+                            <th class="px-5 py-3 text-center w-1/6">Estado</th>
+                            <th class="px-5 py-3 text-center w-1/3">Acciones</th>
+                            <th class="px-5 py-3 text-center w-1/6">Seguimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCuerpo" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="hidden p-10 text-center text-gray-500">
+                <p>No se encontraron datos.</p>
+            </div>
+        </div>
+        
+        <div id="loader" class="fixed top-0 left-0 w-full h-full bg-white bg-opacity-90 flex flex-col justify-center items-center z-50 hidden backdrop-filter backdrop-blur-sm">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
+            <h2 class="text-xl font-semibold text-gray-700">Cargando...</h2>
         </div>
     </div>
 
-    <div id="resultArea" class="w-full max-w-md hidden"></div>
-
-    <button onclick="reiniciarScanner()" id="btnReset" class="hidden mt-8 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-lg hover:bg-blue-700 transition text-lg w-full max-w-xs">
-        <i class="fas fa-qrcode"></i> Escanear Siguiente
-    </button>
-
-    <audio id="audioOk" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
-    <audio id="audioFail" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
-
     <script>
-        let html5QrCode;
-        let listaGlobal = [];
-        let isScanning = true;
+        let datosGlobales = [];
+        let colaEnvios = [];
+        let procesandoCola = false;
 
-        // 1. CARGA INICIAL DE DATOS
-        window.onload = async function() {
+        function cleanString(t) { return t ? t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : ""; }
+
+        // --- FUNCIÓN RENOMBRADA PARA OBLIGAR ACTUALIZACIÓN ---
+        async function generarMensajeFinalV1100(fila, quien, tel, esposo, esposa, url, idBtn, idDate) {
+            if(!url) { alert("⚠️ Aún no se ha generado el Link QR."); return; }
+            
+            let nombreSaludo = (quien === 'el') ? esposo : esposa;
+            let dataQR = `REGISTRO: ${cleanString(esposo)} & ${cleanString(esposa)}`;
+            let linkImagenQR = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(dataQR)}`;
+
+            let msj = `¡Hola ${nombreSaludo}! 👋\n\n`;
+            msj += `Aquí tienes tu Pase de Entrada:\n🔗 ${url}\n\n`;
+            msj += `👇 Imagen de tu código QR:\n🖼️ ${linkImagenQR}`;
+            
+            let wlink = `https://api.whatsapp.com/send?phone=${tel.replace(/\D/g,'')}&text=${encodeURIComponent(msj)}`;
+            window.open(wlink, '_blank');
+
+            // Visual
+            const btn = document.getElementById(idBtn);
+            const dateSpan = document.getElementById(idDate);
+            const statusSpan = document.getElementById(`status-${idDate}`);
+
+            if(btn) {
+                const now = new Date();
+                btn.className = "bg-gray-500 text-white px-3 py-1 rounded text-xs w-full flex justify-center";
+                btn.innerHTML = `<i class="fas fa-redo"></i> Reenviar`;
+                if(dateSpan) dateSpan.innerText = `${now.getDate()}/${now.getMonth()+1} ${now.getHours()}:${now.getMinutes()}`;
+                if(statusSpan) { statusSpan.style.display = "block"; statusSpan.innerText = "⏳ En cola..."; }
+            }
+            
+            colaEnvios.push({ fila, quien, idDate });
+            procesarCola();
+        }
+
+        async function procesarCola() {
+            if (procesandoCola || colaEnvios.length === 0) return;
+            procesandoCola = true;
+            const tarea = colaEnvios.shift();
+            const statusSpan = document.getElementById(`status-${tarea.idDate}`);
+
             try {
-                // 🔥 FIX CRÍTICO: Usamos 'listar_envios' + Anti-Caché
-                const cacheBuster = `&nocache=${new Date().getTime()}`;
-                console.log("Descargando base de datos actualizada...");
-                
-                const response = await fetch(`${SCRIPT_URL}?accion=listar_envios${cacheBuster}`);
+                if(statusSpan) statusSpan.innerText = "🔄 Guardando...";
+                const uid = Date.now() + Math.random();
+                await fetch(`${SCRIPT_URL}?uid=${uid}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ accion: 'registrar_envio_qr', fila: tarea.fila, quien: tarea.quien })
+                });
+                if(statusSpan) { statusSpan.innerText = "✅ OK"; setTimeout(() => statusSpan.style.display="none", 2000); }
+            } catch (error) {
+                if(statusSpan) statusSpan.innerText = "❌ ERROR";
+            } finally {
+                procesandoCola = false;
+                procesarCola();
+            }
+        }
+
+        function enviarRecordatorio(fila, tel, nombre, intentos, btn) {
+            const msj = MENSAJES_PAGO[Math.min(intentos, MENSAJES_PAGO.length-1)].replace("[NOMBRE]", nombre);
+            window.open(`https://api.whatsapp.com/send?phone=${tel.replace(/\D/g,'')}&text=${encodeURIComponent(msj)}`, '_blank');
+            btn.classList.add("btn-enviado");
+            btn.innerText = "Enviado";
+            btn.disabled = true;
+            fetch(`${SCRIPT_URL}?accion=registrar_envio&tipo=recordatorio&fila=${fila}`, {method: 'POST'});
+        }
+
+        async function cargarDatosV1100() {
+            if(SCRIPT_URL.includes("PEGAR_AQUI")) { alert("⚠️ Pega la URL del Backend"); return; }
+            document.getElementById("loader").classList.remove("hidden");
+            try {
+                const response = await fetch(`${SCRIPT_URL}?accion=listar_envios&nocache=${Date.now()}`);
                 const data = await response.json();
+                if (data.result === "success") {
+                    datosGlobales = data.message;
+                    filtrarTabla();
+                } else { alert("Error servidor: " + data.message); }
+            } catch (e) { alert("Error red: " + e.message); }
+            finally { document.getElementById("loader").classList.add("hidden"); }
+        }
+
+        function filtrarTabla() {
+            const texto = document.getElementById("searchInput").value.toLowerCase();
+            const estado = document.getElementById("filterStatus").value;
+            const tbody = document.getElementById("tablaCuerpo");
+            tbody.innerHTML = "";
+            
+            const filtrados = datosGlobales.filter(item => {
+                const matchTexto = (item.esposo + item.esposa).toLowerCase().includes(texto);
+                let matchEstado = true;
+                if (estado === "PAGADO") matchEstado = item.tienePago === true;
+                if (estado === "PENDIENTE") matchEstado = item.tienePago === false;
+                return matchTexto && matchEstado;
+            });
+
+            if (filtrados.length === 0) { document.getElementById("emptyState").classList.remove("hidden"); return; }
+            else { document.getElementById("emptyState").classList.add("hidden"); }
+
+            filtrados.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-red-50 transition duration-150";
                 
-                if(data.result === "success") {
-                    listaGlobal = data.message;
-                    console.log(`Base de datos cargada: ${listaGlobal.length} registros.`);
-                    document.getElementById("loadingOverlay").classList.add("hidden");
-                    iniciarCamara();
+                let htmlPago = item.tienePago ? `<span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">PAGADO</span>` : `<span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">PENDIENTE</span>`;
+                
+                let htmlAcciones = "";
+                if (item.tienePago) {
+                    let notif = item.notificacion || { el: {c:0, t:''}, ella: {c:0, t:''} };
+                    const idBtnEl = `btn-el-${item.fila}`; const idDateEl = `date-el-${item.fila}`;
+                    const idBtnElla = `btn-ella-${item.fila}`; const idDateElla = `date-ella-${item.fila}`;
+
+                    let classEl = (notif.el.c > 0) ? "bg-gray-500" : "bg-green-600 hover:bg-green-700";
+                    let textEl = (notif.el.c > 0) ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Él`;
+                    let dateEl = (notif.el.c > 0) ? `${notif.el.t}` : "";
+
+                    let classElla = (notif.ella.c > 0) ? "bg-gray-500" : "bg-green-600 hover:bg-green-700";
+                    let textElla = (notif.ella.c > 0) ? `<i class="fas fa-redo"></i> Reenviar` : `<i class="fas fa-paper-plane"></i> QR Ella`;
+                    let dateElla = (notif.ella.c > 0) ? `${notif.ella.t}` : "";
+
+                    htmlAcciones = `
+                        <div class="flex flex-col items-center gap-2">
+                            ${item.qrUrl ? `<a href="${item.qrUrl}" target="_blank" class="text-blue-600 text-xs font-bold underline mb-1">Ver QR Generado</a>` : ''}
+                            <div class="flex gap-4">
+                                <div class="text-center w-24">
+                                    <button id="${idBtnEl}" onclick="generarMensajeFinalV1100(${item.fila}, 'el', '${item.tel1}', '${item.esposo}', '${item.esposa}', '${item.qrUrl}', '${idBtnEl}', '${idDateEl}')" class="${classEl} text-white px-3 py-1 rounded text-xs w-full shadow">${textEl}</button>
+                                    <span id="${idDateEl}" class="fecha-mini">${dateEl}</span>
+                                    <span id="status-${idDateEl}" class="status-monitor"></span>
+                                </div>
+                                <div class="text-center w-24">
+                                    <button id="${idBtnElla}" onclick="generarMensajeFinalV1100(${item.fila}, 'ella', '${item.tel2}', '${item.esposo}', '${item.esposa}', '${item.qrUrl}', '${idBtnElla}', '${idDateElla}')" class="${classElla} text-white px-3 py-1 rounded text-xs w-full shadow">${textElla}</button>
+                                    <span id="${idDateElla}" class="fecha-mini">${dateElla}</span>
+                                    <span id="status-${idDateElla}" class="status-monitor"></span>
+                                </div>
+                            </div>
+                        </div>`;
                 } else {
-                    alert("⚠️ Error del servidor: " + data.message);
+                    let intentos = item.followUpCount || 0;
+                    htmlAcciones = `<div class="text-center"><button onclick="enviarRecordatorio(${item.fila}, '${item.tel1}', '${item.esposo}', ${intentos}, this)" class="btn-recordatorio px-3 py-1 rounded text-white text-xs">Recordar</button></div>`;
                 }
-            } catch(e) {
-                console.error(e);
-                alert("❌ Error de conexión. Verifique su internet.");
-            }
-        };
 
-        function iniciarCamara() {
-            html5QrCode = new Html5Qrcode("reader");
-            // Configuración optimizada para lectura rápida
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            };
-            
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-            .catch(err => {
-                console.error(err);
-                alert("Error: No se pudo acceder a la cámara. Verifique permisos.");
+                tr.innerHTML = `
+                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                        <p class="font-bold">${item.esposo}</p><p class="text-xs text-gray-500">& ${item.esposa}</p>
+                    </td>
+                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-center">${htmlPago}</td>
+                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-center">${htmlAcciones}</td>
+                    <td class="px-5 py-4 border-b border-gray-200 bg-white text-center text-xs">OK</td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        function onScanSuccess(decodedText) {
-            if (!isScanning) return;
-            
-            // 1. Pausar para evitar lecturas múltiples
-            html5QrCode.pause();
-            isScanning = false;
-            
-            // 2. Verificar datos
-            verificarQR(decodedText);
-        }
-
-        function verificarQR(textoQR) {
-            const area = document.getElementById("resultArea");
-            const btn = document.getElementById("btnReset");
-            area.classList.remove("hidden");
-            btn.classList.remove("hidden");
-
-            // Normalización de texto (quitar acentos, minúsculas)
-            const normalizar = (t) => t ? t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
-            
-            let textoLimpio = decodeURIComponent(textoQR);
-            let textoNorm = normalizar(textoLimpio);
-
-            // Búsqueda en memoria
-            const encontrado = listaGlobal.find(item => {
-                const esposo = normalizar(item.esposo);
-                const esposa = normalizar(item.esposa);
-                // Coincidencia parcial o total
-                return (esposo && textoNorm.includes(esposo)) || (esposa && textoNorm.includes(esposa));
-            });
-
-            if (encontrado) {
-                // ✅ ÉXITO: ENCONTRADO
-                document.getElementById("audioOk").play();
-                
-                // Determinar estado de color
-                let colorClass = encontrado.asistio ? "bg-yellow-600" : "bg-green-600";
-                let icono = encontrado.asistio ? "fa-exclamation-triangle" : "fa-check-circle";
-                let titulo = encontrado.asistio ? "YA INGRESÓ" : "ACCESO PERMITIDO";
-                let mensajeEstado = encontrado.asistio ? "Esta pareja ya fue marcada anteriormente." : "Bienvenido(a)";
-
-                area.innerHTML = `
-                    <div class="resultado-box ${colorClass} text-white p-6 rounded-xl shadow-2xl text-center border-4 border-white mt-4">
-                        <div class="text-6xl mb-4"><i class="fas ${icono}"></i></div>
-                        <h2 class="text-3xl font-bold mb-2 uppercase">${titulo}</h2>
-                        
-                        <div class="bg-black bg-opacity-30 p-4 rounded-lg mt-4">
-                            <p class="text-xs uppercase tracking-wider opacity-75 mb-1">Pareja Registrada:</p>
-                            <p class="text-2xl font-bold">${encontrado.esposo}</p>
-                            <p class="text-lg">& ${encontrado.esposa}</p>
-                        </div>
-
-                        <div class="flex justify-center gap-2 mt-4">
-                            <span class="text-xs bg-white text-black px-3 py-1 rounded-full font-bold">
-                                Fila #${encontrado.fila}
-                            </span>
-                            <span class="text-xs bg-white text-black px-3 py-1 rounded-full font-bold">
-                                ${encontrado.tienePago ? "💰 PAGO OK" : "⚠️ PAGO PENDIENTE"}
-                            </span>
-                        </div>
-                        
-                        <p class="mt-4 text-sm font-medium opacity-90">${mensajeEstado}</p>
-                    </div>
-                `;
-                
-                // Aquí podrías agregar una llamada fetch para marcar asistencia automáticamente si quisieras
-                // marcarAsistencia(encontrado.fila); 
-
-            } else {
-                // ❌ ERROR: NO ENCONTRADO
-                document.getElementById("audioFail").play();
-                area.innerHTML = `
-                    <div class="resultado-box bg-red-600 text-white p-6 rounded-xl shadow-2xl text-center border-4 border-white mt-4">
-                        <div class="text-6xl mb-4"><i class="fas fa-times-circle"></i></div>
-                        <h2 class="text-3xl font-bold mb-2">ACCESO DENEGADO</h2>
-                        <p class="text-lg mb-4">Código QR no válido o no existe en lista.</p>
-                        <div class="bg-black bg-opacity-30 p-2 rounded text-xs font-mono break-all">
-                            Datos: ${textoQR}
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        function reiniciarScanner() {
-            document.getElementById("resultArea").classList.add("hidden");
-            document.getElementById("btnReset").classList.add("hidden");
-            document.getElementById("resultArea").innerHTML = ""; // Limpiar anterior
-            isScanning = true;
-            html5QrCode.resume();
-        }
-
+        window.onload = cargarDatosV1100;
     </script>
 </body>
 </html>
